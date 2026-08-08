@@ -1,0 +1,176 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * LEPDO Lifestyle design system.
+ * Brand: deep green #0E5A37, ivory #F4E7C8, soft ivory bg #FBF8F2, gold #C9A35B.
+ * All colors are oklch semantic tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-ivory: var(--ivory);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --shadow-soft: 0 1px 2px oklch(0.395 0.093 158 / 0.04), 0 8px 24px -12px oklch(0.395 0.093 158 / 0.14);
+  --shadow-lift: 0 2px 4px oklch(0.395 0.093 158 / 0.05), 0 20px 48px -20px oklch(0.395 0.093 158 / 0.25);
+}
+
+:root {
+  --radius: 1.125rem;
+
+  --background: oklch(0.982 0.009 85);
+  --foreground: oklch(0.335 0.075 158);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.335 0.075 158);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.335 0.075 158);
+
+  --primary: oklch(0.395 0.093 158);
+  --primary-foreground: oklch(0.945 0.045 92);
+
+  --secondary: oklch(0.945 0.038 92);
+  --secondary-foreground: oklch(0.395 0.093 158);
+
+  --muted: oklch(0.958 0.012 88);
+  --muted-foreground: oklch(0.545 0.032 150);
+
+  --accent: oklch(0.945 0.038 92);
+  --accent-foreground: oklch(0.395 0.093 158);
+
+  --ivory: oklch(0.929 0.048 92);
+  --gold: oklch(0.723 0.089 80);
+  --gold-foreground: oklch(0.28 0.06 158);
+
+  --destructive: oklch(0.545 0.19 25);
+  --destructive-foreground: oklch(0.985 0.005 90);
+
+  --border: oklch(0.912 0.014 88);
+  --input: oklch(0.912 0.014 88);
+  --ring: oklch(0.723 0.089 80);
+
+  --sidebar: oklch(0.395 0.093 158);
+  --sidebar-foreground: oklch(0.929 0.048 92);
+  --sidebar-accent: oklch(0.455 0.086 158);
+  --sidebar-accent-foreground: oklch(0.96 0.04 92);
+  --sidebar-border: oklch(0.46 0.078 158);
+}
+
+.dark {
+  --background: oklch(0.22 0.045 158);
+  --foreground: oklch(0.945 0.038 92);
+  --card: oklch(0.27 0.05 158);
+  --card-foreground: oklch(0.945 0.038 92);
+  --popover: oklch(0.27 0.05 158);
+  --popover-foreground: oklch(0.945 0.038 92);
+  --primary: oklch(0.929 0.048 92);
+  --primary-foreground: oklch(0.28 0.06 158);
+  --secondary: oklch(0.32 0.05 158);
+  --secondary-foreground: oklch(0.945 0.038 92);
+  --muted: oklch(0.32 0.05 158);
+  --muted-foreground: oklch(0.75 0.03 120);
+  --accent: oklch(0.32 0.05 158);
+  --accent-foreground: oklch(0.945 0.038 92);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  input,
+  td,
+  th,
+  time,
+  dd {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+}
+
+@utility surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+
+@utility text-eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
+@utility text-stat {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
