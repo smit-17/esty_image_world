@@ -1,4 +1,4 @@
-import lifestylelogo from "@/assets/lifestylelogo.png";
+import lifestylelogo from "@/assets/lifestylelogo.jpeg";
 import { cn } from "@/lib/utils";
 
 export function Logo({ className }: { className?: string }) {
