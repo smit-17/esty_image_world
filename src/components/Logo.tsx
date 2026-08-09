@@ -1,10 +1,10 @@
-import logo from "@/assets/logo.png";
+import lifestylelogo from "@/assets/lifestylelogo.png";
 import { cn } from "@/lib/utils";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <img
-      src={logo}
+      src={lifestylelogo}
       alt="LEPDO Lifestyle"
       className={cn("rounded-2xl object-cover", className)}
     />
