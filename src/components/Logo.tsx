@@ -1,10 +1,10 @@
-import logo from "@/assets/lepdo-logo.png.asset.json";
+import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <img
-      src={logo.url}
+      src={logo}
       alt="LEPDO Lifestyle"
       className={cn("rounded-2xl object-cover", className)}
     />
