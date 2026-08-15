@@ -24,18 +24,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EtsyQuickStatus } from "@/components/EtsyPanel";
+import { EstimateLine } from "@/components/EstimateSummary";
+
 import {
   deleteProduct,
   downloadProductImages,
   ETSY_STATUSES,
   fetchCategories,
+  fetchEstimates,
   fetchImages,
   fetchProducts,
   fetchTeam,
   formatDate,
   signPaths,
   type Product,
+  type ProductEstimate,
 } from "@/lib/lepdo";
+
 
 export const Route = createFileRoute("/_app/products/")({
   head: () => ({
@@ -62,6 +67,16 @@ function ProductsPage() {
   const { data: images = [] } = useQuery({ queryKey: ["images", "all"], queryFn: () => fetchImages() });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const { data: team = [] } = useQuery({ queryKey: ["team"], queryFn: fetchTeam });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates"], queryFn: fetchEstimates });
+
+  const estimateByProduct = useMemo(() => {
+    const map: Record<string, ProductEstimate> = {};
+    for (const e of estimates) map[e.product_id] = e;
+    return map;
+  }, [estimates]);
+
+  const estimateProductIds = useMemo(() => new Set(estimates.map((e) => e.product_id)), [estimates]);
+
 
   async function downloadProduct(p: Product) {
     setZipId(p.id);
@@ -103,7 +118,33 @@ function ProductsPage() {
   const [member, setMember] = useState(ALL);
   const [range, setRange] = useState(ALL);
   const [etsy, setEtsy] = useState(ALL);
+  const [estimate, setEstimate] = useState(ALL);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  const estimateCounts = useMemo(() => {
+    const now = Date.now();
+    const base = (p: Product) => {
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (category !== ALL && p.category !== category) return false;
+      if (member !== ALL && p.team_member !== member) return false;
+      if (etsy !== ALL && (p.etsy_status ?? "not_listed") !== etsy) return false;
+      if (range !== ALL) {
+        const days = Number(range);
+        if (now - new Date(p.created_at).getTime() > days * 86400000) return false;
+      }
+      return true;
+    };
+    let all = 0;
+    let added = 0;
+    let notAdded = 0;
+    for (const p of products) {
+      if (!base(p)) continue;
+      all += 1;
+      if (estimateProductIds.has(p.id)) added += 1;
+      else notAdded += 1;
+    }
+    return { all, added, notAdded };
+  }, [products, estimates, search, category, member, etsy, range]);
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -116,9 +157,14 @@ function ProductsPage() {
         const days = Number(range);
         if (now - new Date(p.created_at).getTime() > days * 86400000) return false;
       }
+      if (estimate !== ALL) {
+        const has = estimateProductIds.has(p.id);
+        if (estimate === "added" && !has) return false;
+        if (estimate === "not_added" && has) return false;
+      }
       return true;
     });
-  }, [products, search, category, member, range, etsy]);
+  }, [products, search, category, member, range, etsy, estimate, estimateProductIds]);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -144,7 +190,7 @@ function ProductsPage() {
         </p>
       </header>
 
-      <div className="surface grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="surface grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -205,6 +251,16 @@ function ProductsPage() {
             <SelectItem value="90">Last 90 days</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={estimate} onValueChange={setEstimate}>
+          <SelectTrigger className="h-11 rounded-xl">
+            <SelectValue placeholder="Estimation status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All ({estimateCounts.all})</SelectItem>
+            <SelectItem value="added">Estimation Added ({estimateCounts.added})</SelectItem>
+            <SelectItem value="not_added">Estimation Not Added ({estimateCounts.notAdded})</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -253,22 +309,22 @@ function ProductsPage() {
                     <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wider text-primary">
                       {p.category}
                     </span>
-                    <span className="absolute right-3 top-3 rounded-full bg-primary/90 px-2.5 py-1 text-[0.65rem] font-medium text-primary-foreground">
-                      {count} {count === 1 ? "image" : "images"}
-                    </span>
                   </div>
                 </Link>
                 <div className="space-y-1 p-4">
                   <h3 className="truncate text-lg leading-snug">{p.name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {p.team_member} · {formatDate(p.created_at)}
+                    {p.team_member} · {formatDate(p.created_at)} · {count}{" "}
+                    {count === 1 ? "image" : "images"}
                   </p>
                   {p.etsy_account && (
                     <p className="truncate text-xs text-muted-foreground">Etsy · {p.etsy_account}</p>
                   )}
+                  <EstimateLine estimate={estimateByProduct[p.id]} />
                   <div className="pt-2">
                     <EtsyQuickStatus product={p} />
                   </div>
+
                   <div className="flex gap-1.5 pt-3">
                     <Button asChild size="sm" variant="secondary" className="flex-1 rounded-lg">
                       <Link to="/products/$id" params={{ id: p.id }}>

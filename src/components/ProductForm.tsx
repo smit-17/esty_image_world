@@ -79,6 +79,7 @@ export function ProductForm({ product }: { product?: Product }) {
   const [category, setCategory] = useState(product?.category ?? "");
   const [member, setMember] = useState(product?.team_member ?? "");
   const [notes, setNotes] = useState(product?.notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(product?.reference_url ?? "");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [removed, setRemoved] = useState<ProductImage[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -201,16 +202,35 @@ export function ProductForm({ product }: { product?: Product }) {
     mutationFn: async () => {
       let productId = product?.id;
 
+      const raw = referenceUrl.trim();
+      let reference_url: string | null = null;
+      if (raw) {
+        const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        try {
+          reference_url = new URL(withProto).toString();
+        } catch {
+          throw new Error("Please enter a valid reference link");
+        }
+      }
+
+      const fields = {
+        name: name.trim(),
+        category,
+        team_member: member,
+        notes: notes.trim() || null,
+        reference_url,
+      };
+
       if (productId) {
         const { error } = await supabase
           .from("products" as never)
-          .update({ name: name.trim(), category, team_member: member, notes: notes.trim() || null } as never)
+          .update(fields as never)
           .eq("id", productId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("products" as never)
-          .insert({ name: name.trim(), category, team_member: member, notes: notes.trim() || null } as never)
+          .insert(fields as never)
           .select("id")
           .single();
         if (error) throw error;
@@ -295,6 +315,7 @@ export function ProductForm({ product }: { product?: Product }) {
         setCategory("");
         setMember("");
         setNotes("");
+        setReferenceUrl("");
       }
       queryClient.invalidateQueries();
       toast.success(isEdit ? "Product updated successfully" : "Product saved successfully");
@@ -350,6 +371,21 @@ export function ProductForm({ product }: { product?: Product }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <label className="text-eyebrow">Reference / inspiration link</label>
+            <Input
+              type="url"
+              inputMode="url"
+              value={referenceUrl}
+              onChange={(e) => setReferenceUrl(e.target.value)}
+              placeholder="Paste original jewelry product URL here…"
+              maxLength={500}
+              className="h-11 rounded-xl"
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional — where this design idea came from.
+            </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <label className="text-eyebrow">Notes</label>

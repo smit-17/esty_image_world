@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStorageRouteImport } from './routes/_app.storage'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
@@ -38,6 +39,11 @@ const AppCategoriesRoute = AppCategoriesRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEstimatesRoute = AppEstimatesRouteImport.update({
+  id: '/estimates',
+  path: '/estimates',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/estimates': typeof AppEstimatesRoute
   '/settings': typeof AppSettingsRoute
   '/storage': typeof AppStorageRoute
   '/team': typeof AppTeamRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/estimates': typeof AppEstimatesRoute
   '/settings': typeof AppSettingsRoute
   '/storage': typeof AppStorageRoute
   '/team': typeof AppTeamRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/estimates': typeof AppEstimatesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/storage': typeof AppStorageRoute
   '/_app/team': typeof AppTeamRoute
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/dashboard'
+    | '/estimates'
     | '/settings'
     | '/storage'
     | '/team'
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/dashboard'
+    | '/estimates'
     | '/settings'
     | '/storage'
     | '/team'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_app/categories'
     | '/_app/dashboard'
+    | '/_app/estimates'
     | '/_app/settings'
     | '/_app/storage'
     | '/_app/team'
@@ -187,6 +199,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/estimates': {
+      id: '/_app/estimates'
+      path: '/estimates'
+      fullPath: '/estimates'
+      preLoaderRoute: typeof AppEstimatesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -244,6 +263,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppEstimatesRoute: typeof AppEstimatesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStorageRoute: typeof AppStorageRoute
   AppTeamRoute: typeof AppTeamRoute
@@ -256,6 +276,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCategoriesRoute: AppCategoriesRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppEstimatesRoute: AppEstimatesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStorageRoute: AppStorageRoute,
   AppTeamRoute: AppTeamRoute,

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { currentRole } from "@/lib/gate";
 
 export const BUCKET = "jewelry-images";
 export const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB plan allowance
@@ -25,6 +26,7 @@ export type Product = {
   team_member: string;
   notes: string | null;
   cover_url: string | null;
+  reference_url?: string | null;
   created_at: string;
   updated_at: string;
   etsy_listed?: boolean;
@@ -49,13 +51,30 @@ export type ProductImage = {
 export type Category = { id: string; name: string; created_at: string };
 export type TeamMember = { id: string; name: string; email: string | null; created_at: string };
 
+/** PostgREST caps a single response at 1000 rows — page through everything. */
+const PAGE = 1000;
+async function fetchAllRows<T>(
+  build: () => { range: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }> },
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from("products" as never)
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as unknown as Product[];
+  return fetchAllRows<Product>(() =>
+    supabase
+      .from("products" as never)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true }) as never,
+  );
 }
 
 export async function fetchProduct(id: string): Promise<Product> {
@@ -65,12 +84,17 @@ export async function fetchProduct(id: string): Promise<Product> {
 }
 
 export async function fetchImages(productId?: string): Promise<ProductImage[]> {
-  let q = supabase.from("product_images" as never).select("*").order("position");
-  if (productId) q = q.eq("product_id", productId);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as unknown as ProductImage[];
+  return fetchAllRows<ProductImage>(() => {
+    let q = supabase
+      .from("product_images" as never)
+      .select("*")
+      .order("position", { ascending: true })
+      .order("id", { ascending: true });
+    if (productId) q = q.eq("product_id", productId);
+    return q as never;
+  });
 }
+
 
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase.from("categories" as never).select("*").order("name");
@@ -196,6 +220,7 @@ export type UploadedImage = { path: string; thumbPath: string; size: number };
  * Full-size (max 2200px) and a lightweight thumbnail (max 480px) are stored.
  */
 export async function uploadOneImage(productId: string, file: File): Promise<UploadedImage> {
+  assertAdmin("uploading images");
   const bitmap = await loadBitmap(file);
   const [full, thumb] = await Promise.all([
     resizeToBlob(bitmap, 2200, 0.9),
@@ -232,6 +257,7 @@ export async function uploadImagesParallel(
   onProgress: (id: string, state: "uploading" | "done" | "error", error?: string) => void,
   concurrency = 3,
 ): Promise<Record<string, UploadedImage>> {
+  assertAdmin("uploading images");
   const out: Record<string, UploadedImage> = {};
   let cursor = 0;
   let firstError: Error | null = null;
@@ -258,6 +284,7 @@ export async function uploadImagesParallel(
 
 /** Remove image rows + their storage objects (scoped to those exact paths only). */
 export async function deleteImageRecords(images: ProductImage[]) {
+  assertAdmin("deleting images");
   if (!images.length) return;
   const paths = images.flatMap((i) => [i.path, ...(i.thumb_path ? [i.thumb_path] : [])]);
   await supabase.storage.from(BUCKET).remove(paths);
@@ -269,6 +296,7 @@ export async function deleteImageRecords(images: ProductImage[]) {
 }
 
 export async function deleteProduct(id: string) {
+  assertAdmin("deleting products");
   const images = await fetchImages(id);
   if (images.length) {
     await supabase.storage
@@ -294,8 +322,19 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Downloads are admin-only; the estimation expert role may view images but never save them. */
+function assertCanDownload() {
+  assertAdmin("downloading images");
+}
+
+/** Admin-only guard for destructive/management actions. */
+export function assertAdmin(action = "this action") {
+  if (currentRole() !== "admin") throw new Error(`Your role does not allow ${action}`);
+}
+
 /** Download a single full-resolution image. */
 export async function downloadSingleImage(product: Product, image: ProductImage, index = 0) {
+  assertCanDownload();
   const { data, error } = await supabase.storage.from(BUCKET).download(image.path);
   if (error || !data) throw new Error("Could not download this image");
   const ext = image.path.split(".").pop() ?? "webp";
@@ -308,6 +347,7 @@ export async function downloadProductImages(
   images: ProductImage[],
   onProgress?: (done: number, total: number) => void,
 ) {
+  assertCanDownload();
   if (!images.length) throw new Error("This product has no images to download");
   const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
@@ -345,6 +385,7 @@ export type EtsyUpdate = {
 };
 
 export async function updateEtsy(id: string, patch: EtsyUpdate) {
+  assertAdmin("editing Etsy details");
   const listed = patch.status !== "not_listed";
   const { error } = await supabase
     .from("products" as never)
@@ -387,6 +428,7 @@ export async function fetchEtsyAccountRows(): Promise<EtsyAccount[]> {
 }
 
 export async function addEtsyAccount(name: string) {
+  assertAdmin("managing Etsy accounts");
   const { error } = await supabase
     .from("etsy_accounts" as never)
     .insert({ name: name.trim() } as never);
@@ -394,7 +436,42 @@ export async function addEtsyAccount(name: string) {
 }
 
 export async function deleteEtsyAccount(id: string) {
+  assertAdmin("managing Etsy accounts");
   const { error } = await supabase.from("etsy_accounts" as never).delete().eq("id", id);
   if (error) throw error;
 }
 
+
+// ---------- Metal & Diamond estimates ----------
+export type DiamondRow = { id: string; weight: string; note: string };
+export type ProductEstimate = {
+  id: string;
+  product_id: string;
+  gold_weight: number;
+  diamonds: DiamondRow[];
+  updated_at: string;
+};
+
+export async function fetchEstimates(): Promise<ProductEstimate[]> {
+  const { data, error } = await supabase.from("product_estimates" as never).select("*");
+  if (error) throw error;
+  return (data ?? []) as unknown as ProductEstimate[];
+}
+
+export async function saveEstimate(
+  productId: string,
+  goldWeight: number,
+  diamonds: DiamondRow[],
+) {
+  const { error } = await supabase
+    .from("product_estimates" as never)
+    .upsert(
+      {
+        product_id: productId,
+        gold_weight: goldWeight,
+        diamonds,
+      } as never,
+      { onConflict: "product_id" } as never,
+    );
+  if (error) throw error;
+}

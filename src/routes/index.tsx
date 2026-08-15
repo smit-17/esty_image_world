@@ -27,19 +27,20 @@ export const Route = createFileRoute("/")({
 });
 
 function LoginPage() {
-  const { ready, unlocked, unlock } = useGate();
+  const { ready, unlocked, unlock, homePath } = useGate();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (ready && unlocked) navigate({ to: "/dashboard", replace: true });
-  }, [ready, unlocked, navigate]);
+    if (ready && unlocked) navigate({ to: homePath, replace: true });
+  }, [ready, unlocked, homePath, navigate]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (unlock(password)) {
-      navigate({ to: "/dashboard", replace: true });
+    const role = unlock(password);
+    if (role) {
+      navigate({ to: role === "expert" ? "/estimates" : "/dashboard", replace: true });
     } else {
       setError(true);
     }
@@ -90,7 +91,7 @@ function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Shared team access · Demo password 901902
+          Admin & estimation-expert access · separate passwords
         </p>
       </div>
     </div>

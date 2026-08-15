@@ -50,6 +50,41 @@ export type Database = {
         }
         Relationships: []
       }
+      product_estimates: {
+        Row: {
+          created_at: string
+          diamonds: Json
+          gold_weight: number
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          diamonds?: Json
+          gold_weight?: number
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          diamonds?: Json
+          gold_weight?: number
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_estimates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -105,6 +140,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          reference_url: string | null
           team_member: string
           updated_at: string
         }
@@ -121,6 +157,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          reference_url?: string | null
           team_member: string
           updated_at?: string
         }
@@ -137,6 +174,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          reference_url?: string | null
           team_member?: string
           updated_at?: string
         }

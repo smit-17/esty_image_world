@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Download, Pencil, Trash2, ImageOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Pencil, Trash2, ImageOff, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EtsyPanel } from "@/components/EtsyPanel";
+import { EstimatePanel } from "@/components/EstimateSummary";
 import {
   deleteProduct,
   downloadProductImages,
   downloadSingleImage,
+  fetchEstimates,
   fetchImages,
   fetchProduct,
   formatBytes,
@@ -28,6 +30,7 @@ import {
   signPaths,
   type ProductImage,
 } from "@/lib/lepdo";
+
 
 export const Route = createFileRoute("/_app/products/$id/")({
   head: () => ({
@@ -59,6 +62,9 @@ function ProductDetailPage() {
     queryKey: ["product-images", id],
     queryFn: () => fetchImages(id),
   });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates"], queryFn: fetchEstimates });
+  const estimate = estimates.find((e) => e.product_id === id);
+
 
   // Thumbnails for the grid — full-resolution images are only fetched on open/download.
   const thumbKeys = images.map((i) => i.thumb_path ?? i.path);
@@ -163,6 +169,30 @@ function ProductDetailPage() {
       </header>
 
       <EtsyPanel product={product} />
+
+      <EstimatePanel estimate={estimate} />
+
+
+      {product.reference_url && (
+        <div className="surface flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-eyebrow">Reference / inspiration link</p>
+            <a
+              href={product.reference_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block truncate text-sm text-primary underline underline-offset-4"
+            >
+              {product.reference_url}
+            </a>
+          </div>
+          <Button asChild variant="outline" className="rounded-full px-5">
+            <a href={product.reference_url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="size-4" /> Open reference
+            </a>
+          </Button>
+        </div>
+      )}
 
       {product.notes && (
         <div className="surface p-6">

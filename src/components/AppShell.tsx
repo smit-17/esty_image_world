@@ -9,12 +9,13 @@ import {
   HardDrive,
   Settings,
   Menu,
+  Scale,
   X,
   Lock,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
-import { useGate } from "@/lib/gate";
+import { isRouteAllowed, useGate } from "@/lib/gate";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +23,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/products", label: "Products", icon: Gem },
   { to: "/products/new", label: "Add Product", icon: PlusCircle },
+  { to: "/estimates", label: "Metal & Diamond", icon: Scale },
   { to: "/categories", label: "Categories", icon: Tags },
   { to: "/team", label: "Team Members", icon: Users },
   { to: "/storage", label: "Storage", icon: HardDrive },
@@ -29,24 +31,32 @@ const NAV = [
 ] as const;
 
 export function AppShell() {
-  const { ready, unlocked, lock } = useGate();
+  const { ready, unlocked, lock, role, isAdmin, homePath } = useGate();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (ready && !unlocked) navigate({ to: "/", replace: true });
-  }, [ready, unlocked, navigate]);
+    if (!ready) return;
+    if (!unlocked) {
+      navigate({ to: "/", replace: true });
+      return;
+    }
+    if (!isRouteAllowed(role, pathname)) {
+      navigate({ to: homePath, replace: true });
+    }
+  }, [ready, unlocked, role, pathname, homePath, navigate]);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  if (!ready || !unlocked) {
+  if (!ready || !unlocked || !isRouteAllowed(role, pathname)) {
     return <div className="min-h-screen bg-background" />;
   }
 
-  const current = NAV.find((n) => pathname === n.to) ?? NAV.find((n) => pathname.startsWith(n.to));
+  const nav = NAV.filter((item) => isRouteAllowed(role, item.to));
+  const current = nav.find((n) => pathname === n.to) ?? nav.find((n) => pathname.startsWith(n.to));
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -69,7 +79,7 @@ export function AppShell() {
           <div className="leading-tight">
             <p className="font-display text-xl text-sidebar-foreground">Lepdo</p>
             <p className="text-[0.65rem] uppercase tracking-[0.22em] text-sidebar-foreground/60">
-              Lifestyle
+              {role === "expert" ? "Estimation Expert" : "Lifestyle"}
             </p>
           </div>
           <button
@@ -82,7 +92,7 @@ export function AppShell() {
         </div>
 
         <nav className="mt-10 flex flex-1 flex-col gap-1">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.to;
             return (
               <Link
@@ -123,6 +133,7 @@ export function AppShell() {
             <p className="text-eyebrow">LEPDO Lifestyle</p>
             <h2 className="truncate text-lg font-medium">{current?.label ?? "Dashboard"}</h2>
           </div>
+          {isAdmin && (
           <div className="ml-auto hidden sm:block">
             <Button asChild variant="default" className="rounded-full px-5">
               <Link to="/products/new">
@@ -130,6 +141,7 @@ export function AppShell() {
               </Link>
             </Button>
           </div>
+          )}
         </header>
 
         <main className="flex-1 px-5 py-7 lg:px-10 lg:py-10">
@@ -137,6 +149,7 @@ export function AppShell() {
         </main>
       </div>
 
+      {isAdmin && (
       <Link
         to="/products/new"
         className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-transform hover:scale-105 sm:hidden"
@@ -144,6 +157,7 @@ export function AppShell() {
       >
         <PlusCircle className="size-6" strokeWidth={1.75} />
       </Link>
+      )}
     </div>
   );
 }
