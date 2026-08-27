@@ -26,6 +26,9 @@ export type Product = {
   team_member: string;
   notes: string | null;
   cover_url: string | null;
+  sku?: string | null;
+  subcategory?: string | null;
+  product_type?: string | null;
   reference_url?: string | null;
   created_at: string;
   updated_at: string;
@@ -443,12 +446,23 @@ export async function deleteEtsyAccount(id: string) {
 
 
 // ---------- Metal & Diamond estimates ----------
-export type DiamondRow = { id: string; weight: string; note: string };
+export type DiamondRow = {
+  id: string;
+  weight: string;
+  note: string;
+  shape?: string;
+  colour?: string;
+  clarity?: string;
+};
 export type ProductEstimate = {
   id: string;
   product_id: string;
   gold_weight: number;
   diamonds: DiamondRow[];
+  metal_type?: string | null;
+  metal_karat?: string | null;
+  metal_colour?: string | null;
+  diamond_type?: string | null;
   updated_at: string;
 };
 
@@ -458,10 +472,18 @@ export async function fetchEstimates(): Promise<ProductEstimate[]> {
   return (data ?? []) as unknown as ProductEstimate[];
 }
 
+export type EstimateMeta = {
+  metal_type?: string | null;
+  metal_karat?: string | null;
+  metal_colour?: string | null;
+  diamond_type?: string | null;
+};
+
 export async function saveEstimate(
   productId: string,
   goldWeight: number,
   diamonds: DiamondRow[],
+  meta: EstimateMeta = {},
 ) {
   const { error } = await supabase
     .from("product_estimates" as never)
@@ -470,6 +492,7 @@ export async function saveEstimate(
         product_id: productId,
         gold_weight: goldWeight,
         diamonds,
+        ...meta,
       } as never,
       { onConflict: "product_id" } as never,
     );

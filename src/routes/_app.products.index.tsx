@@ -1,18 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Search, Eye, Pencil, Trash2, ImageOff, Download, Loader2 } from "lucide-react";
+import { Eye, Pencil, Trash2, ImageOff, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,12 +16,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EtsyQuickStatus } from "@/components/EtsyPanel";
+import { ProductFilterBar } from "@/components/ProductFilterBar";
+import { applyFilters, EMPTY_FILTERS, type Filters } from "@/lib/filters";
 import { EstimateLine } from "@/components/EstimateSummary";
 
 import {
   deleteProduct,
   downloadProductImages,
-  ETSY_STATUSES,
   fetchCategories,
   fetchEstimates,
   fetchImages,
@@ -57,8 +50,6 @@ export const Route = createFileRoute("/_app/products/")({
   component: ProductsPage,
 });
 
-const ALL = "__all__";
-
 function ProductsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -75,8 +66,11 @@ function ProductsPage() {
     return map;
   }, [estimates]);
 
-  const estimateProductIds = useMemo(() => new Set(estimates.map((e) => e.product_id)), [estimates]);
-
+  const imageCountByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const i of images) map[i.product_id] = (map[i.product_id] ?? 0) + 1;
+    return map;
+  }, [images]);
 
   async function downloadProduct(p: Product) {
     setZipId(p.id);
@@ -113,58 +107,13 @@ function ProductsPage() {
     staleTime: 1000 * 60 * 60 * 6,
   });
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState(ALL);
-  const [member, setMember] = useState(ALL);
-  const [range, setRange] = useState(ALL);
-  const [etsy, setEtsy] = useState(ALL);
-  const [estimate, setEstimate] = useState(ALL);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-  const estimateCounts = useMemo(() => {
-    const now = Date.now();
-    const base = (p: Product) => {
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (category !== ALL && p.category !== category) return false;
-      if (member !== ALL && p.team_member !== member) return false;
-      if (etsy !== ALL && (p.etsy_status ?? "not_listed") !== etsy) return false;
-      if (range !== ALL) {
-        const days = Number(range);
-        if (now - new Date(p.created_at).getTime() > days * 86400000) return false;
-      }
-      return true;
-    };
-    let all = 0;
-    let added = 0;
-    let notAdded = 0;
-    for (const p of products) {
-      if (!base(p)) continue;
-      all += 1;
-      if (estimateProductIds.has(p.id)) added += 1;
-      else notAdded += 1;
-    }
-    return { all, added, notAdded };
-  }, [products, estimates, search, category, member, etsy, range]);
-
-  const filtered = useMemo(() => {
-    const now = Date.now();
-    return products.filter((p) => {
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (category !== ALL && p.category !== category) return false;
-      if (member !== ALL && p.team_member !== member) return false;
-      if (etsy !== ALL && (p.etsy_status ?? "not_listed") !== etsy) return false;
-      if (range !== ALL) {
-        const days = Number(range);
-        if (now - new Date(p.created_at).getTime() > days * 86400000) return false;
-      }
-      if (estimate !== ALL) {
-        const has = estimateProductIds.has(p.id);
-        if (estimate === "added" && !has) return false;
-        if (estimate === "not_added" && has) return false;
-      }
-      return true;
-    });
-  }, [products, search, category, member, range, etsy, estimate, estimateProductIds]);
+  const filtered = useMemo(
+    () => applyFilters(products, filters, { estimateByProduct, imageCountByProduct }),
+    [products, filters, estimateByProduct, imageCountByProduct],
+  );
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -185,83 +134,17 @@ function ProductsPage() {
           <p className="text-eyebrow">Library</p>
           <h1 className="mt-1 text-3xl text-primary lg:text-4xl">Products</h1>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {filtered.length} of {products.length} products
-        </p>
       </header>
 
-      <div className="surface grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products"
-            className="h-11 rounded-xl pl-9"
-          />
-        </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="h-11 rounded-xl">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All categories</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.name}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={member} onValueChange={setMember}>
-          <SelectTrigger className="h-11 rounded-xl">
-            <SelectValue placeholder="Team member" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All team members</SelectItem>
-            {team.map((t) => (
-              <SelectItem key={t.id} value={t.name}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={etsy} onValueChange={setEtsy}>
-          <SelectTrigger className="h-11 rounded-xl">
-            <SelectValue placeholder="Etsy status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All Etsy statuses</SelectItem>
-            {ETSY_STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={range} onValueChange={setRange}>
-          <SelectTrigger className="h-11 rounded-xl">
-            <SelectValue placeholder="Date" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any date</SelectItem>
-            <SelectItem value="1">Last 24 hours</SelectItem>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={estimate} onValueChange={setEstimate}>
-          <SelectTrigger className="h-11 rounded-xl">
-            <SelectValue placeholder="Estimation status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All ({estimateCounts.all})</SelectItem>
-            <SelectItem value="added">Estimation Added ({estimateCounts.added})</SelectItem>
-            <SelectItem value="not_added">Estimation Not Added ({estimateCounts.notAdded})</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ProductFilterBar
+        scope="products"
+        filters={filters}
+        onChange={setFilters}
+        categories={categories.map((c) => c.name)}
+        team={team.map((t) => t.name)}
+        resultCount={filtered.length}
+        totalCount={products.length}
+      />
 
       {isLoading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

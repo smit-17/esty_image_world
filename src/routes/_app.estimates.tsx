@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Search, Loader2, Check, ImageOff, Clock } from "lucide-react";
+import { Plus, Trash2, Loader2, Check, ImageOff, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProductFilterBar } from "@/components/ProductFilterBar";
+import {
+  ANY,
+  applyFilters,
+  DIAMOND_CLARITIES,
+  DIAMOND_COLOURS,
+  DIAMOND_SHAPES,
+  DIAMOND_TYPES,
+  EMPTY_FILTERS,
+  METAL_COLOURS,
+  METAL_KARATS,
+  METAL_TYPES,
+  type Filters,
+} from "@/lib/filters";
 import {
   fetchCategories,
+  fetchTeam,
   fetchEstimates,
   fetchImages,
   fetchProducts,
@@ -48,24 +63,13 @@ export const Route = createFileRoute("/_app/estimates")({
   component: EstimatesPage,
 });
 
-const ALL = "__all__";
-
-const QUICK_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "today", label: "Today Listed" },
-  { value: "week", label: "This Week" },
-  { value: "month", label: "This Month" },
-  { value: "recent", label: "Recent" },
-  { value: "saved", label: "Saved" },
-  { value: "pending", label: "Unsaved / Pending" },
-] as const;
-
-type QuickFilter = (typeof QUICK_FILTERS)[number]["value"];
-
 const newRow = (): DiamondRow => ({
   id: Math.random().toString(36).slice(2),
   weight: "",
   note: "",
+  shape: "",
+  colour: "",
+  clarity: "",
 });
 
 function toNum(v: string) {
@@ -81,9 +85,7 @@ function isComplete(e?: ProductEstimate) {
 
 function EstimatesPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [quick, setQuick] = useState<QuickFilter>("all");
-  const [category, setCategory] = useState(ALL);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -98,6 +100,7 @@ function EstimatesPage() {
     queryFn: () => fetchImages(),
   });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: team = [] } = useQuery({ queryKey: ["team"], queryFn: fetchTeam });
 
   const byProduct = useMemo(() => {
     const map: Record<string, ProductEstimate> = {};
@@ -125,51 +128,16 @@ function EstimatesPage() {
     staleTime: 1000 * 60 * 60 * 6,
   });
 
-  const matchesQuick = (p: (typeof products)[number], q: QuickFilter) => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const created = new Date(p.created_at).getTime();
-    const done = isComplete(byProduct[p.id]);
-    switch (q) {
-      case "today":
-        return created >= startOfDay;
-      case "week":
-        return now.getTime() - created <= 7 * 86400000;
-      case "month":
-        return now.getTime() - created <= 30 * 86400000;
-      case "recent":
-        return now.getTime() - created <= 3 * 86400000;
-      case "saved":
-        return done;
-      case "pending":
-        return !done;
-      default:
-        return true;
-    }
-  };
-
-  const base = useMemo(
-    () =>
-      products.filter((p) => {
-        if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-        if (category !== ALL && p.category !== category) return false;
-        return true;
-      }),
-    [products, search, category],
-  );
+  const imageCountByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const i of images) map[i.product_id] = (map[i.product_id] ?? 0) + 1;
+    return map;
+  }, [images]);
 
   const filtered = useMemo(
-    () => base.filter((p) => matchesQuick(p, quick)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [base, quick, byProduct],
+    () => applyFilters(products, filters, { estimateByProduct: byProduct, imageCountByProduct }),
+    [products, filters, byProduct, imageCountByProduct],
   );
-
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const f of QUICK_FILTERS) map[f.value] = base.filter((p) => matchesQuick(p, f.value)).length;
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, byProduct]);
 
   const savedCount = products.filter((p) => isComplete(byProduct[p.id])).length;
 
@@ -207,58 +175,15 @@ function EstimatesPage() {
         </p>
       </header>
 
-      <div className="surface space-y-3 p-3">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products"
-              className="h-11 rounded-xl pl-9"
-            />
-          </div>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="h-11 rounded-xl">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.name}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setQuick(f.value)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                quick === f.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:text-primary",
-              )}
-            >
-              <span>{f.label}</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none lining-nums tabular-nums",
-                  quick === f.value ? "bg-primary-foreground/20" : "bg-muted text-foreground/70",
-                )}
-              >
-                {counts[f.value] ?? 0}
-              </span>
-
-            </button>
-          ))}
-        </div>
-      </div>
+      <ProductFilterBar
+        scope="estimates"
+        filters={filters}
+        onChange={setFilters}
+        categories={categories.map((c) => c.name)}
+        team={team.map((t) => t.name)}
+        resultCount={filtered.length}
+        totalCount={products.length}
+      />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -315,6 +240,12 @@ function EstimateCard({
   const [rows, setRows] = useState<DiamondRow[]>(
     estimate?.diamonds?.length ? estimate.diamonds : [newRow()],
   );
+  const [meta, setMeta] = useState({
+    metal_type: estimate?.metal_type ?? "",
+    metal_karat: estimate?.metal_karat ?? "14KT",
+    metal_colour: estimate?.metal_colour ?? "",
+    diamond_type: estimate?.diamond_type ?? "",
+  });
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -323,6 +254,12 @@ function EstimateCard({
     if (dirty || !estimate) return;
     setGold(estimate.gold_weight ? String(estimate.gold_weight) : "");
     setRows(estimate.diamonds?.length ? estimate.diamonds : [newRow()]);
+    setMeta({
+      metal_type: estimate.metal_type ?? "",
+      metal_karat: estimate.metal_karat ?? "14KT",
+      metal_colour: estimate.metal_colour ?? "",
+      diamond_type: estimate.diamond_type ?? "",
+    });
   }, [estimate, dirty]);
 
   const total = rows.reduce((sum, r) => sum + toNum(r.weight), 0);
@@ -340,6 +277,12 @@ function EstimateCard({
         product.id,
         toNum(gold),
         rows.filter((r) => r.weight.trim() || r.note.trim()),
+        {
+          metal_type: meta.metal_type || null,
+          metal_karat: meta.metal_karat || null,
+          metal_colour: meta.metal_colour || null,
+          diamond_type: meta.diamond_type || null,
+        },
       );
       setDirty(false);
       onSaved();
@@ -395,8 +338,49 @@ function EstimateCard({
           </p>
         </header>
 
+        <div className="grid grid-cols-2 gap-2">
+          <MetaSelect
+            label="Metal type"
+            value={meta.metal_type}
+            options={METAL_TYPES}
+            onChange={(v) => {
+              setMeta((m) => ({ ...m, metal_type: v }));
+              setDirty(true);
+            }}
+          />
+          <MetaSelect
+            label="Karat"
+            value={meta.metal_karat}
+            options={METAL_KARATS}
+            onChange={(v) => {
+              setMeta((m) => ({ ...m, metal_karat: v }));
+              setDirty(true);
+            }}
+          />
+          <MetaSelect
+            label="Metal colour"
+            value={meta.metal_colour}
+            options={METAL_COLOURS}
+            onChange={(v) => {
+              setMeta((m) => ({ ...m, metal_colour: v }));
+              setDirty(true);
+            }}
+          />
+          <MetaSelect
+            label="Diamond type"
+            value={meta.diamond_type}
+            options={DIAMOND_TYPES}
+            onChange={(v) => {
+              setMeta((m) => ({ ...m, diamond_type: v }));
+              setDirty(true);
+            }}
+          />
+        </div>
+
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">14KT Gold Weight (gm)</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {meta.metal_karat || "14KT"} {meta.metal_type || "Gold"} Weight (gm)
+          </span>
           <Input
             inputMode="decimal"
             value={gold}
@@ -440,6 +424,26 @@ function EstimateCard({
               >
                 <Trash2 className="size-4" />
               </Button>
+              <div className="col-span-3 grid grid-cols-3 gap-2">
+                <MetaSelect
+                  label="Shape"
+                  value={r.shape ?? ""}
+                  options={DIAMOND_SHAPES}
+                  onChange={(v) => update(r.id, { shape: v })}
+                />
+                <MetaSelect
+                  label="Colour"
+                  value={r.colour ?? ""}
+                  options={DIAMOND_COLOURS}
+                  onChange={(v) => update(r.id, { colour: v })}
+                />
+                <MetaSelect
+                  label="Clarity"
+                  value={r.clarity ?? ""}
+                  options={DIAMOND_CLARITIES}
+                  onChange={(v) => update(r.id, { clarity: v })}
+                />
+              </div>
             </div>
           ))}
           <Button
@@ -467,5 +471,39 @@ function EstimateCard({
         </Button>
       </div>
     </section>
+  );
+}
+
+/** Small labelled dropdown used for metal + diamond attributes. */
+function MetaSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block min-w-0 space-y-1">
+      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <Select value={value || ANY} onValueChange={(v) => onChange(v === ANY ? "" : v)}>
+        <SelectTrigger className="h-10 rounded-xl text-xs">
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          <SelectItem value={ANY}>—</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o} value={o}>
+              {o}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
   );
 }

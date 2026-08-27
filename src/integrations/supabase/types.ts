@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -50,28 +50,177 @@ export type Database = {
         }
         Relationships: []
       }
+      finding_activity: {
+        Row: {
+          activity: string
+          created_at: string
+          finding_code: string | null
+          finding_id: string | null
+          id: string
+          user_name: string | null
+        }
+        Insert: {
+          activity: string
+          created_at?: string
+          finding_code?: string | null
+          finding_id?: string | null
+          id?: string
+          user_name?: string | null
+        }
+        Update: {
+          activity?: string
+          created_at?: string
+          finding_code?: string | null
+          finding_id?: string | null
+          id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finding_activity_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finding_options: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      finding_team_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      findings: {
+        Row: {
+          assigned_to: string | null
+          brand: string | null
+          category: string | null
+          code: string
+          created_at: string
+          finding_by: string | null
+          gender: string | null
+          id: string
+          image_path: string | null
+          note: string | null
+          platform: string
+          priority: string
+          product_url: string | null
+          status: string
+          style: string | null
+          thumb_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          brand?: string | null
+          category?: string | null
+          code: string
+          created_at?: string
+          finding_by?: string | null
+          gender?: string | null
+          id?: string
+          image_path?: string | null
+          note?: string | null
+          platform?: string
+          priority?: string
+          product_url?: string | null
+          status?: string
+          style?: string | null
+          thumb_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          brand?: string | null
+          category?: string | null
+          code?: string
+          created_at?: string
+          finding_by?: string | null
+          gender?: string | null
+          id?: string
+          image_path?: string | null
+          note?: string | null
+          platform?: string
+          priority?: string
+          product_url?: string | null
+          status?: string
+          style?: string | null
+          thumb_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_estimates: {
         Row: {
           created_at: string
+          diamond_type: string | null
           diamonds: Json
           gold_weight: number
           id: string
+          metal_colour: string | null
+          metal_karat: string | null
+          metal_type: string | null
           product_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          diamond_type?: string | null
           diamonds?: Json
           gold_weight?: number
           id?: string
+          metal_colour?: string | null
+          metal_karat?: string | null
+          metal_type?: string | null
           product_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          diamond_type?: string | null
           diamonds?: Json
           gold_weight?: number
           id?: string
+          metal_colour?: string | null
+          metal_karat?: string | null
+          metal_type?: string | null
           product_id?: string
           updated_at?: string
         }
@@ -140,7 +289,10 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          product_type: string | null
           reference_url: string | null
+          sku: string | null
+          subcategory: string | null
           team_member: string
           updated_at: string
         }
@@ -157,7 +309,10 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          product_type?: string | null
           reference_url?: string | null
+          sku?: string | null
+          subcategory?: string | null
           team_member: string
           updated_at?: string
         }
@@ -174,7 +329,10 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          product_type?: string | null
           reference_url?: string | null
+          sku?: string | null
+          subcategory?: string | null
           team_member?: string
           updated_at?: string
         }

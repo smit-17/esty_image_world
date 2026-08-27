@@ -12,6 +12,7 @@ import {
   Scale,
   X,
   Lock,
+  Search,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
@@ -29,6 +30,10 @@ const NAV = [
   { to: "/storage", label: "Storage", icon: HardDrive },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
+
+const FINDING_NAV = [{ to: "/finding", label: "Finding", icon: Search }] as const;
+
+
 
 export function AppShell() {
   const { ready, unlocked, lock, role, isAdmin, homePath } = useGate();
@@ -56,7 +61,11 @@ export function AppShell() {
   }
 
   const nav = NAV.filter((item) => isRouteAllowed(role, item.to));
-  const current = nav.find((n) => pathname === n.to) ?? nav.find((n) => pathname.startsWith(n.to));
+  const findingNav = FINDING_NAV.filter((item) => isRouteAllowed(role, item.to));
+  const allNav = [...nav, ...findingNav];
+  const current =
+    allNav.find((n) => pathname === n.to) ??
+    [...allNav].sort((a, b) => b.to.length - a.to.length).find((n) => pathname.startsWith(n.to));
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -110,6 +119,25 @@ export function AppShell() {
               </Link>
             );
           })}
+          {findingNav.map((item) => {
+            const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                )}
+              >
+                <item.icon className="size-[18px]" strokeWidth={1.75} />
+                {item.label}
+              </Link>
+            );
+          })}
+
         </nav>
 
         <button
@@ -144,7 +172,7 @@ export function AppShell() {
           )}
         </header>
 
-        <main className="flex-1 px-5 py-7 lg:px-10 lg:py-10">
+        <main className="flex-1 px-4 py-5 lg:px-8 lg:py-6">
           <Outlet />
         </main>
       </div>

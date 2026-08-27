@@ -46,6 +46,9 @@ import {
   type ProductImage,
 } from "@/lib/lepdo";
 import { cn } from "@/lib/utils";
+import { PRODUCT_TYPES, SUBCATEGORIES } from "@/lib/filters";
+
+const NONE = "__none__";
 
 type UploadState = "idle" | "uploading" | "done" | "error";
 
@@ -79,6 +82,9 @@ export function ProductForm({ product }: { product?: Product }) {
   const [category, setCategory] = useState(product?.category ?? "");
   const [member, setMember] = useState(product?.team_member ?? "");
   const [notes, setNotes] = useState(product?.notes ?? "");
+  const [sku, setSku] = useState(product?.sku ?? "");
+  const [subcategory, setSubcategory] = useState(product?.subcategory ?? "");
+  const [productType, setProductType] = useState(product?.product_type ?? "");
   const [referenceUrl, setReferenceUrl] = useState(product?.reference_url ?? "");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [removed, setRemoved] = useState<ProductImage[]>([]);
@@ -218,6 +224,9 @@ export function ProductForm({ product }: { product?: Product }) {
         category,
         team_member: member,
         notes: notes.trim() || null,
+        sku: sku.trim() || null,
+        subcategory: subcategory || null,
+        product_type: productType || null,
         reference_url,
       };
 
@@ -367,6 +376,48 @@ export function ProductForm({ product }: { product?: Product }) {
                 {team.map((t) => (
                   <SelectItem key={t.id} value={t.name}>
                     {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-eyebrow">SKU</label>
+            <Input
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="LEP-0001"
+              maxLength={60}
+              className="h-11 rounded-xl"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-eyebrow">Subcategory</label>
+            <Select value={subcategory || NONE} onValueChange={(v) => setSubcategory(v === NONE ? "" : v)}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="Select subcategory" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value={NONE}>None</SelectItem>
+                {SUBCATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-eyebrow">Product type</label>
+            <Select value={productType || NONE} onValueChange={(v) => setProductType(v === NONE ? "" : v)}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="Select product type" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value={NONE}>None</SelectItem>
+                {PRODUCT_TYPES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
                   </SelectItem>
                 ))}
               </SelectContent>
