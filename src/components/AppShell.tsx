@@ -11,12 +11,17 @@ import {
   Menu,
   Scale,
   X,
-  Lock,
+  LogOut,
   Search,
+  UserCog,
+  ShieldCheck,
+  ScrollText,
+  KeyRound,
+  UserCircle,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
-import { isRouteAllowed, useGate } from "@/lib/gate";
+import { isRouteAllowed, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -33,39 +38,61 @@ const NAV = [
 
 const FINDING_NAV = [{ to: "/finding", label: "Finding", icon: Search }] as const;
 
+const ADMIN_NAV = [
+  { to: "/admin/users", label: "Users", icon: UserCog, permission: "USER_VIEW" },
+  { to: "/admin/approvals", label: "Approvals", icon: ShieldCheck, permission: "USER_APPROVE" },
+  { to: "/admin/roles", label: "Roles & Permissions", icon: KeyRound, permission: "USER_MANAGE_ROLES" },
+  { to: "/admin/audit", label: "Audit Log", icon: ScrollText, permission: "AUDIT_VIEW" },
+] as const;
 
+const ACCOUNT_NAV = [{ to: "/profile", label: "My Profile", icon: UserCircle }] as const;
 
 export function AppShell() {
-  const { ready, unlocked, lock, role, isAdmin, homePath } = useGate();
+  const { ready, isAuthenticated, isActive, can, signOut, homePath, profile, roles } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (!ready) return;
-    if (!unlocked) {
+    if (!isAuthenticated) {
       navigate({ to: "/", replace: true });
       return;
     }
-    if (!isRouteAllowed(role, pathname)) {
+    if (!isActive) {
+      navigate({ to: "/pending", replace: true });
+      return;
+    }
+    if (!isRouteAllowed(pathname, can)) {
       navigate({ to: homePath, replace: true });
     }
-  }, [ready, unlocked, role, pathname, homePath, navigate]);
+  }, [ready, isAuthenticated, isActive, can, pathname, homePath, navigate]);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  if (!ready || !unlocked || !isRouteAllowed(role, pathname)) {
+  if (!ready || !isAuthenticated || !isActive || !isRouteAllowed(pathname, can)) {
     return <div className="min-h-screen bg-background" />;
   }
 
-  const nav = NAV.filter((item) => isRouteAllowed(role, item.to));
-  const findingNav = FINDING_NAV.filter((item) => isRouteAllowed(role, item.to));
-  const allNav = [...nav, ...findingNav];
+  const nav = NAV.filter((item) => isRouteAllowed(item.to, can));
+  const findingNav = FINDING_NAV.filter((item) => isRouteAllowed(item.to, can));
+  const adminNav = ADMIN_NAV.filter((item) => can(item.permission));
+  const allNav = [...nav, ...findingNav, ...adminNav, ...ACCOUNT_NAV];
   const current =
     allNav.find((n) => pathname === n.to) ??
     [...allNav].sort((a, b) => b.to.length - a.to.length).find((n) => pathname.startsWith(n.to));
+
+  const roleLabel = roles[0]?.name ?? "Member";
+
+  const linkClass = (active: boolean) =>
+    cn(
+      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
+      active
+        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
+        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+    );
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -79,7 +106,7 @@ export function AppShell() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-sidebar px-5 py-7 transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto bg-sidebar px-5 py-7 transition-transform duration-300 lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -88,7 +115,7 @@ export function AppShell() {
           <div className="leading-tight">
             <p className="font-display text-xl text-sidebar-foreground">Lepdo</p>
             <p className="text-[0.65rem] uppercase tracking-[0.22em] text-sidebar-foreground/60">
-              {role === "expert" ? "Estimation Expert" : "Lifestyle"}
+              {roleLabel}
             </p>
           </div>
           <button
@@ -100,54 +127,64 @@ export function AppShell() {
           </button>
         </div>
 
-        <nav className="mt-10 flex flex-1 flex-col gap-1">
-          {nav.map((item) => {
-            const active = pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                )}
-              >
-                <item.icon className="size-[18px]" strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            );
-          })}
-          {findingNav.map((item) => {
-            const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                )}
-              >
-                <item.icon className="size-[18px]" strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="mt-9 flex flex-1 flex-col gap-1">
+          {nav.map((item) => (
+            <Link key={item.to} to={item.to} className={linkClass(pathname === item.to)}>
+              <item.icon className="size-[18px]" strokeWidth={1.75} />
+              {item.label}
+            </Link>
+          ))}
+          {findingNav.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={linkClass(pathname === item.to || pathname.startsWith(`${item.to}/`))}
+            >
+              <item.icon className="size-[18px]" strokeWidth={1.75} />
+              {item.label}
+            </Link>
+          ))}
 
+          {adminNav.length > 0 && (
+            <>
+              <p className="mt-5 px-3.5 text-[0.6rem] uppercase tracking-[0.22em] text-sidebar-foreground/45">
+                Administration
+              </p>
+              {adminNav.map((item) => (
+                <Link key={item.to} to={item.to} className={linkClass(pathname === item.to)}>
+                  <item.icon className="size-[18px]" strokeWidth={1.75} />
+                  {item.label}
+                </Link>
+              ))}
+            </>
+          )}
+
+          <p className="mt-5 px-3.5 text-[0.6rem] uppercase tracking-[0.22em] text-sidebar-foreground/45">
+            Account
+          </p>
+          {ACCOUNT_NAV.map((item) => (
+            <Link key={item.to} to={item.to} className={linkClass(pathname === item.to)}>
+              <item.icon className="size-[18px]" strokeWidth={1.75} />
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
+        <div className="mt-6 rounded-xl bg-sidebar-accent/40 px-3.5 py-3">
+          <p className="truncate text-sm font-medium text-sidebar-foreground">
+            {profile?.full_name ?? profile?.username ?? "Account"}
+          </p>
+          <p className="truncate text-xs text-sidebar-foreground/60">{profile?.email}</p>
+        </div>
+
         <button
-          onClick={() => {
-            lock();
+          onClick={async () => {
+            await signOut();
             navigate({ to: "/", replace: true });
           }}
-          className="mt-6 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          className="mt-2 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
         >
-          <Lock className="size-[18px]" strokeWidth={1.75} /> Lock workspace
+          <LogOut className="size-[18px]" strokeWidth={1.75} /> Sign out
         </button>
       </aside>
 
@@ -161,14 +198,14 @@ export function AppShell() {
             <p className="text-eyebrow">LEPDO Lifestyle</p>
             <h2 className="truncate text-lg font-medium">{current?.label ?? "Dashboard"}</h2>
           </div>
-          {isAdmin && (
-          <div className="ml-auto hidden sm:block">
-            <Button asChild variant="default" className="rounded-full px-5">
-              <Link to="/products/new">
-                <PlusCircle className="size-4" /> Add Product
-              </Link>
-            </Button>
-          </div>
+          {can("PRODUCT_ADD") && (
+            <div className="ml-auto hidden sm:block">
+              <Button asChild variant="default" className="rounded-full px-5">
+                <Link to="/products/new">
+                  <PlusCircle className="size-4" /> Add Product
+                </Link>
+              </Button>
+            </div>
           )}
         </header>
 
@@ -177,14 +214,14 @@ export function AppShell() {
         </main>
       </div>
 
-      {isAdmin && (
-      <Link
-        to="/products/new"
-        className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-transform hover:scale-105 sm:hidden"
-        aria-label="Add product"
-      >
-        <PlusCircle className="size-6" strokeWidth={1.75} />
-      </Link>
+      {can("PRODUCT_ADD") && (
+        <Link
+          to="/products/new"
+          className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-transform hover:scale-105 sm:hidden"
+          aria-label="Add product"
+        >
+          <PlusCircle className="size-6" strokeWidth={1.75} />
+        </Link>
       )}
     </div>
   );

@@ -1,11 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useGate } from "@/lib/gate";
+import { useAuth } from "@/lib/auth";
+import { bootstrapSuperAdmin } from "@/lib/superadmin.functions";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,37 +16,48 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Secure access to the LEPDO Lifestyle library of AI-generated jewelry imagery.",
+          "Sign in to the LEPDO Lifestyle workspace to manage jewelry products, images and estimates.",
       },
       { property: "og:title", content: "Sign in — LEPDO Lifestyle" },
       {
         property: "og:description",
-        content: "Secure access to the LEPDO Lifestyle AI jewelry image library.",
+        content: "Secure account access to the LEPDO Lifestyle AI jewelry image library.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { ready, unlocked, unlock, homePath } = useGate();
+  const { ready, isAuthenticated, isActive, status, signIn, homePath } = useAuth();
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (ready && unlocked) navigate({ to: homePath, replace: true });
-  }, [ready, unlocked, homePath, navigate]);
+    if (!ready || !isAuthenticated) return;
+    if (isActive) navigate({ to: homePath, replace: true });
+    else navigate({ to: "/pending", replace: true });
+  }, [ready, isAuthenticated, isActive, status, homePath, navigate]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const role = unlock(password);
-    if (role) {
-      navigate({ to: role === "expert" ? "/estimates" : "/dashboard", replace: true });
-    } else {
-      setError(true);
+    setBusy(true);
+    setError(null);
+    let res = await signIn(email, password);
+    if (res.error) {
+      // Super Admin fallback: provision/repair the account from the env password.
+      const boot = await bootstrapSuperAdmin({ data: { email, password } });
+      if (boot.ok) res = await signIn(email, password);
     }
+    setBusy(false);
+    if (res.error) setError(res.error);
   }
+
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-5 py-16">
@@ -61,37 +74,56 @@ function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="surface mt-9 space-y-5 p-7">
+        <form onSubmit={onSubmit} className="surface mt-9 space-y-4 p-7">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-eyebrow">
+              Email
+            </label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12 rounded-xl"
+            />
+          </div>
           <div className="space-y-2">
             <label htmlFor="password" className="text-eyebrow">
-              Access password
+              Password
             </label>
             <Input
               id="password"
               type="password"
               autoComplete="current-password"
-              placeholder="••••••"
+              required
+              placeholder="••••••••"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(false);
-              }}
-              className="h-12 rounded-xl text-center text-lg tracking-[0.3em]"
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12 rounded-xl"
             />
-            {error && (
-              <p className="text-center text-xs text-destructive">
-                That password doesn't match. Please try again.
-              </p>
-            )}
           </div>
 
-          <Button type="submit" className="h-12 w-full rounded-xl text-base">
-            Enter workspace
+          {error && <p className="text-center text-xs text-destructive">{error}</p>}
+
+          <Button type="submit" disabled={busy} className="h-12 w-full rounded-xl text-base">
+            {busy && <Loader2 className="size-4 animate-spin" />} Sign in
           </Button>
+
+          <div className="flex items-center justify-between pt-1 text-xs">
+            <Link to="/forgot-password" className="text-muted-foreground hover:text-primary">
+              Forgot password?
+            </Link>
+            <Link to="/register" className="font-medium text-primary hover:underline">
+              Create account
+            </Link>
+          </div>
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Admin & estimation-expert access · separate passwords
+          New accounts need Super Admin approval before access is granted.
         </p>
       </div>
     </div>

@@ -10,10 +10,85 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          browser: string | null
+          created_at: string
+          description: string | null
+          device: string | null
+          entity_id: string | null
+          entity_type: string | null
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          module: string | null
+          new_values: Json | null
+          old_values: Json | null
+          os: string | null
+          request_url: string | null
+          session_id: string | null
+          success: boolean
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action: string
+          browser?: string | null
+          created_at?: string
+          description?: string | null
+          device?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          module?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          os?: string | null
+          request_url?: string | null
+          session_id?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action?: string
+          browser?: string | null
+          created_at?: string
+          description?: string | null
+          device?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          module?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          os?: string | null
+          request_url?: string | null
+          session_id?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -57,6 +132,8 @@ export type Database = {
           finding_code: string | null
           finding_id: string | null
           id: string
+          ip_address: string | null
+          user_id: string | null
           user_name: string | null
         }
         Insert: {
@@ -65,6 +142,8 @@ export type Database = {
           finding_code?: string | null
           finding_id?: string | null
           id?: string
+          ip_address?: string | null
+          user_id?: string | null
           user_name?: string | null
         }
         Update: {
@@ -73,6 +152,8 @@ export type Database = {
           finding_code?: string | null
           finding_id?: string | null
           id?: string
+          ip_address?: string | null
+          user_id?: string | null
           user_name?: string | null
         }
         Relationships: [
@@ -134,6 +215,7 @@ export type Database = {
           category: string | null
           code: string
           created_at: string
+          created_by: string | null
           finding_by: string | null
           gender: string | null
           id: string
@@ -146,6 +228,7 @@ export type Database = {
           style: string | null
           thumb_path: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -153,6 +236,7 @@ export type Database = {
           category?: string | null
           code: string
           created_at?: string
+          created_by?: string | null
           finding_by?: string | null
           gender?: string | null
           id?: string
@@ -165,6 +249,7 @@ export type Database = {
           style?: string | null
           thumb_path?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -172,6 +257,7 @@ export type Database = {
           category?: string | null
           code?: string
           created_at?: string
+          created_by?: string | null
           finding_by?: string | null
           gender?: string | null
           id?: string
@@ -184,12 +270,43 @@ export type Database = {
           style?: string | null
           thumb_path?: string | null
           updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      permissions: {
+        Row: {
+          action: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          module: string
+        }
+        Insert: {
+          action: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module: string
+        }
+        Update: {
+          action?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module?: string
         }
         Relationships: []
       }
       product_estimates: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
+          created_by: string | null
           diamond_type: string | null
           diamonds: Json
           gold_weight: number
@@ -201,7 +318,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
+          created_by?: string | null
           diamond_type?: string | null
           diamonds?: Json
           gold_weight?: number
@@ -213,7 +333,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
+          created_by?: string | null
           diamond_type?: string | null
           diamonds?: Json
           gold_weight?: number
@@ -243,6 +366,7 @@ export type Database = {
           product_id: string
           size_bytes: number
           thumb_path: string | null
+          uploaded_by: string | null
           url: string
         }
         Insert: {
@@ -253,6 +377,7 @@ export type Database = {
           product_id: string
           size_bytes?: number
           thumb_path?: string | null
+          uploaded_by?: string | null
           url: string
         }
         Update: {
@@ -263,6 +388,7 @@ export type Database = {
           product_id?: string
           size_bytes?: number
           thumb_path?: string | null
+          uploaded_by?: string | null
           url?: string
         }
         Relationships: [
@@ -280,6 +406,7 @@ export type Database = {
           category: string
           cover_url: string | null
           created_at: string
+          created_by: string | null
           etsy_account: string | null
           etsy_listed: boolean
           etsy_listed_at: string | null
@@ -287,6 +414,7 @@ export type Database = {
           etsy_status: string
           etsy_url: string | null
           id: string
+          is_shared: boolean
           name: string
           notes: string | null
           product_type: string | null
@@ -295,11 +423,13 @@ export type Database = {
           subcategory: string | null
           team_member: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           category: string
           cover_url?: string | null
           created_at?: string
+          created_by?: string | null
           etsy_account?: string | null
           etsy_listed?: boolean
           etsy_listed_at?: string | null
@@ -307,6 +437,7 @@ export type Database = {
           etsy_status?: string
           etsy_url?: string | null
           id?: string
+          is_shared?: boolean
           name: string
           notes?: string | null
           product_type?: string | null
@@ -315,11 +446,13 @@ export type Database = {
           subcategory?: string | null
           team_member: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           category?: string
           cover_url?: string | null
           created_at?: string
+          created_by?: string | null
           etsy_account?: string | null
           etsy_listed?: boolean
           etsy_listed_at?: string | null
@@ -327,6 +460,7 @@ export type Database = {
           etsy_status?: string
           etsy_url?: string | null
           id?: string
+          is_shared?: boolean
           name?: string
           notes?: string | null
           product_type?: string | null
@@ -335,6 +469,115 @@ export type Database = {
           subcategory?: string | null
           team_member?: string
           updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          mobile: string | null
+          status: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          mobile?: string | null
+          status?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          mobile?: string | null
+          status?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_super_admin: boolean
+          is_system: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_super_admin?: boolean
+          is_system?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_super_admin?: boolean
+          is_system?: boolean
+          name?: string
         }
         Relationships: []
       }
@@ -359,12 +602,149 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          allowed: boolean
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          permission_id: string
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          permission_id: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          permission_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          removed_at: string | null
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          removed_at?: string | null
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          removed_at?: string | null
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_status: string
+          old_status: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ensure_profile: {
+        Args: { _full_name?: string; _mobile?: string; _username?: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          mobile: string | null
+          status: string
+          updated_at: string
+          username: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      has_permission: {
+        Args: { _code: string; _uid: string }
+        Returns: boolean
+      }
+      is_super_admin: { Args: { _uid: string }; Returns: boolean }
+      my_permission_codes: {
+        Args: never
+        Returns: {
+          code: string
+        }[]
+      }
+      set_user_status: {
+        Args: { _reason?: string; _status: string; _user_id: string }
+        Returns: undefined
+      }
+      user_is_active: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

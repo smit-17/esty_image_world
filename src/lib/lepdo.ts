@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { currentRole } from "@/lib/gate";
+import { assertPerm, hasPerm } from "@/lib/auth";
 
 export const BUCKET = "jewelry-images";
 export const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB plan allowance
@@ -223,7 +223,7 @@ export type UploadedImage = { path: string; thumbPath: string; size: number };
  * Full-size (max 2200px) and a lightweight thumbnail (max 480px) are stored.
  */
 export async function uploadOneImage(productId: string, file: File): Promise<UploadedImage> {
-  assertAdmin("uploading images");
+  assertPerm("IMAGE_ADD", "uploading images");
   const bitmap = await loadBitmap(file);
   const [full, thumb] = await Promise.all([
     resizeToBlob(bitmap, 2200, 0.9),
@@ -260,7 +260,7 @@ export async function uploadImagesParallel(
   onProgress: (id: string, state: "uploading" | "done" | "error", error?: string) => void,
   concurrency = 3,
 ): Promise<Record<string, UploadedImage>> {
-  assertAdmin("uploading images");
+  assertPerm("IMAGE_ADD", "uploading images");
   const out: Record<string, UploadedImage> = {};
   let cursor = 0;
   let firstError: Error | null = null;
@@ -287,7 +287,7 @@ export async function uploadImagesParallel(
 
 /** Remove image rows + their storage objects (scoped to those exact paths only). */
 export async function deleteImageRecords(images: ProductImage[]) {
-  assertAdmin("deleting images");
+  assertPerm("IMAGE_DELETE", "deleting images");
   if (!images.length) return;
   const paths = images.flatMap((i) => [i.path, ...(i.thumb_path ? [i.thumb_path] : [])]);
   await supabase.storage.from(BUCKET).remove(paths);
@@ -299,7 +299,7 @@ export async function deleteImageRecords(images: ProductImage[]) {
 }
 
 export async function deleteProduct(id: string) {
-  assertAdmin("deleting products");
+  assertPerm("PRODUCT_DELETE", "deleting products");
   const images = await fetchImages(id);
   if (images.length) {
     await supabase.storage
@@ -327,12 +327,12 @@ function triggerDownload(blob: Blob, filename: string) {
 
 /** Downloads are admin-only; the estimation expert role may view images but never save them. */
 function assertCanDownload() {
-  assertAdmin("downloading images");
+  assertPerm("IMAGE_DOWNLOAD", "downloading images");
 }
 
 /** Admin-only guard for destructive/management actions. */
 export function assertAdmin(action = "this action") {
-  if (currentRole() !== "admin") throw new Error(`Your role does not allow ${action}`);
+  if (!hasPerm("PRODUCT_UPDATE")) throw new Error(`Your role does not allow ${action}`);
 }
 
 /** Download a single full-resolution image. */
@@ -388,7 +388,7 @@ export type EtsyUpdate = {
 };
 
 export async function updateEtsy(id: string, patch: EtsyUpdate) {
-  assertAdmin("editing Etsy details");
+  assertPerm("PRODUCT_UPDATE", "editing Etsy details");
   const listed = patch.status !== "not_listed";
   const { error } = await supabase
     .from("products" as never)
@@ -431,7 +431,7 @@ export async function fetchEtsyAccountRows(): Promise<EtsyAccount[]> {
 }
 
 export async function addEtsyAccount(name: string) {
-  assertAdmin("managing Etsy accounts");
+  assertPerm("SETTINGS_UPDATE", "managing Etsy accounts");
   const { error } = await supabase
     .from("etsy_accounts" as never)
     .insert({ name: name.trim() } as never);
@@ -439,7 +439,7 @@ export async function addEtsyAccount(name: string) {
 }
 
 export async function deleteEtsyAccount(id: string) {
-  assertAdmin("managing Etsy accounts");
+  assertPerm("SETTINGS_UPDATE", "managing Etsy accounts");
   const { error } = await supabase.from("etsy_accounts" as never).delete().eq("id", id);
   if (error) throw error;
 }
