@@ -77,7 +77,7 @@ function EtsyAccountsCard() {
     try {
       await addEtsyAccount(value);
       setName("");
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries({ queryKey: ["etsy-account-rows"] });
       toast.success("Etsy account added");
     } catch (err) {
       toast.error((err as Error).message);
@@ -87,7 +87,7 @@ function EtsyAccountsCard() {
   async function remove(id: string) {
     try {
       await deleteEtsyAccount(id);
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries({ queryKey: ["etsy-account-rows"] });
       toast.success("Etsy account removed");
     } catch (err) {
       toast.error((err as Error).message);

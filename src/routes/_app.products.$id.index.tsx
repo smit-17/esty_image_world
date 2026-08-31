@@ -1,7 +1,17 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Download, Pencil, Trash2, ImageOff, Loader2, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Pencil,
+  Trash2,
+  ImageOff,
+  Loader2,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EtsyPanel } from "@/components/EtsyPanel";
 import { EstimatePanel } from "@/components/EstimateSummary";
+import { QcBadge } from "@/components/QcBadge";
 import {
   deleteProduct,
   downloadProductImages,
@@ -51,7 +62,7 @@ function ProductDetailPage() {
   const { id } = useParams({ from: "/_app/products/$id/" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [lightbox, setLightbox] = useState<ProductImage | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
@@ -74,6 +85,7 @@ function ProductDetailPage() {
     enabled: images.length > 0,
     staleTime: 1000 * 60 * 60 * 6,
   });
+  const lightbox = lightboxIndex === null ? null : (images[lightboxIndex] ?? null);
   const { data: fullSigned = {} } = useQuery({
     queryKey: ["signed-full", lightbox?.path ?? ""],
     queryFn: () => signPaths([lightbox!.path]),
@@ -86,7 +98,8 @@ function ProductDetailPage() {
   async function confirmDelete() {
     try {
       await deleteProduct(id);
-      queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: ["products"] });
+      void queryClient.invalidateQueries({ queryKey: ["images", "all"] });
       toast.success("Product deleted");
       navigate({ to: "/products" });
     } catch (e) {
@@ -138,7 +151,13 @@ function ProductDetailPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-eyebrow">{product.category}</p>
-          <h1 className="mt-1 text-3xl text-primary lg:text-4xl">{product.name}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold tabular-nums tracking-wide text-primary">
+              SKU: {product.sku?.trim() || "—"}
+            </span>
+            <QcBadge product={product} />
+          </div>
+          <h1 className="mt-2 text-3xl text-primary lg:text-4xl">{product.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {product.team_member} · {formatDate(product.created_at)} · {images.length} images ·{" "}
             {formatBytes(totalBytes)}
@@ -215,7 +234,7 @@ function ProductDetailPage() {
                 {url ? (
                   <button
                     type="button"
-                    onClick={() => setLightbox(img)}
+                    onClick={() => setLightboxIndex(index)}
                     className="size-full"
                     aria-label={`Open ${product.name} image`}
                   >
@@ -249,20 +268,48 @@ function ProductDetailPage() {
         </div>
       )}
 
-      <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightbox(null)}>
+      <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightboxIndex(null)}>
         <DialogContent className="max-w-4xl overflow-hidden rounded-2xl p-2">
-          {lightbox &&
-            (fullSigned[lightbox.path] ? (
-              <img
-                src={fullSigned[lightbox.path]}
-                alt={product.name}
-                className="max-h-[80vh] w-full rounded-xl object-contain"
-              />
-            ) : (
-              <div className="flex h-72 items-center justify-center">
-                <Loader2 className="size-6 animate-spin text-primary" />
-              </div>
-            ))}
+          {lightbox && (
+            <div className="relative">
+              {fullSigned[lightbox.path] ? (
+                <img
+                  src={fullSigned[lightbox.path]}
+                  alt={product.name}
+                  className="max-h-[80vh] w-full rounded-xl object-contain"
+                />
+              ) : (
+                <div className="flex h-72 items-center justify-center">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                </div>
+              )}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous image"
+                    onClick={() =>
+                      setLightboxIndex((i) => ((i ?? 0) - 1 + images.length) % images.length)
+                    }
+                    className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-primary shadow-soft"
+                  >
+                    <ChevronLeft className="size-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next image"
+                    onClick={() => setLightboxIndex((i) => ((i ?? 0) + 1) % images.length)}
+                    className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-primary shadow-soft"
+                  >
+                    <ChevronRight className="size-5" />
+                  </button>
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-xs font-medium tabular-nums text-primary">
+                    {(lightboxIndex ?? 0) + 1} / {images.length}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

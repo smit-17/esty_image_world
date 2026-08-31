@@ -418,6 +418,9 @@ export type Database = {
           name: string
           notes: string | null
           product_type: string | null
+          qc_by: string | null
+          qc_status: string
+          qc_updated_at: string | null
           reference_url: string | null
           sku: string | null
           subcategory: string | null
@@ -441,6 +444,9 @@ export type Database = {
           name: string
           notes?: string | null
           product_type?: string | null
+          qc_by?: string | null
+          qc_status?: string
+          qc_updated_at?: string | null
           reference_url?: string | null
           sku?: string | null
           subcategory?: string | null
@@ -464,6 +470,9 @@ export type Database = {
           name?: string
           notes?: string | null
           product_type?: string | null
+          qc_by?: string | null
+          qc_status?: string
+          qc_updated_at?: string | null
           reference_url?: string | null
           sku?: string | null
           subcategory?: string | null

@@ -159,6 +159,16 @@ export function ProductFilterBar({
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetName, setPresetName] = useState("");
 
+  // Debounced search: type freely, results recompute 250ms after the last key.
+  const [q, setQ] = useState(filters.q);
+  useEffect(() => setQ(filters.q), [filters.q]);
+  useEffect(() => {
+    if (q === filters.q) return;
+    const t = setTimeout(() => onChange({ ...filters, q }), 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
   useEffect(() => setPresets(loadPresets(scope)), [scope]);
   useEffect(() => {
     if (open) setDraft(filters);
@@ -179,8 +189,8 @@ export function ProductFilterBar({
         <div className="relative min-w-[12rem] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            value={filters.q}
-            onChange={(e) => onChange({ ...filters, q: e.target.value })}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
             placeholder="Search by product ID, SKU, name or keyword"
             className="h-11 rounded-xl pl-9"
             aria-label="Search products"

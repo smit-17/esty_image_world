@@ -90,10 +90,15 @@ function AssignedPage() {
   const rows = filtered.slice(0, visible);
 
   async function setRowStatus(f: Finding, value: string) {
+    const previous = f.status;
+    // Instant inline update; the write happens in the background.
+    const patch = (v: string) => (rows?: Finding[]) =>
+      rows?.map((r) => (r.id === f.id ? { ...r, status: v } : r));
+    queryClient.setQueryData(["findings"], patch(value));
     try {
       await updateFinding(f, { status: value }, `Status changed to ${value}`);
-      await queryClient.invalidateQueries({ queryKey: ["findings"] });
     } catch (err) {
+      queryClient.setQueryData(["findings"], patch(previous));
       toast.error((err as Error).message);
     }
   }

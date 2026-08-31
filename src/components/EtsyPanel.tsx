@@ -64,8 +64,17 @@ export function EtsyQuickStatus({ product }: { product: Product }) {
         listedBy: product.etsy_listed_by ?? product.team_member,
         listedAt: product.etsy_listed_at ?? null,
       });
-      await queryClient.invalidateQueries();
-      toast.success(`Etsy status set to ${etsyStatusLabel(status)}`);
+      queryClient.setQueryData(["products"], (rows?: Product[]) =>
+        rows?.map((r) =>
+          r.id === product.id
+            ? { ...r, etsy_status: status, etsy_listed: status !== "not_listed" }
+            : r,
+        ),
+      );
+      queryClient.setQueryData(["product", product.id], (r?: Product) =>
+        r ? { ...r, etsy_status: status, etsy_listed: status !== "not_listed" } : r,
+      );
+      toast.success("Saved \u2713", { duration: 1200 });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -134,7 +143,8 @@ export function EtsyPanel({ product }: { product: Product }) {
         listedBy: listedBy || null,
         listedAt: date ? new Date(date).toISOString() : null,
       });
-      await queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: ["products"] });
+      void queryClient.invalidateQueries({ queryKey: ["product", product.id] });
       toast.success("Etsy listing details saved");
     } catch (e) {
       toast.error((e as Error).message);

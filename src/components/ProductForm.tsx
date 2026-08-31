@@ -326,7 +326,9 @@ export function ProductForm({ product }: { product?: Product }) {
         setNotes("");
         setReferenceUrl("");
       }
-      queryClient.invalidateQueries();
+      void queryClient.invalidateQueries({ queryKey: ["products"] });
+      void queryClient.invalidateQueries({ queryKey: ["images", "all"] });
+      void queryClient.invalidateQueries({ queryKey: ["product", id] });
       toast.success(isEdit ? "Product updated successfully" : "Product saved successfully");
       navigate({ to: "/products/$id", params: { id } });
     },

@@ -41,6 +41,7 @@ import {
 } from "@/lib/lepdo";
 import { cn } from "@/lib/utils";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { useIncremental } from "@/hooks/useIncremental";
 
 export const Route = createFileRoute("/_app/estimates")({
   head: () => ({
@@ -108,19 +109,43 @@ function EstimatesPage() {
     return map;
   }, [estimates]);
 
+  // Group images once (O(n)) instead of scanning the whole list per product.
+  const imagesByProduct = useMemo(() => {
+    const map: Record<string, typeof images> = {};
+    for (const i of images) (map[i.product_id] ??= []).push(i);
+    return map;
+  }, [images]);
+
   // Main/first image per product — full resolution so weights can be judged.
   const coverByProduct = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of products) {
-      const own = images.filter((i) => i.product_id === p.id);
+      const own = imagesByProduct[p.id] ?? [];
       const cover = own.find((i) => i.path === p.cover_url) ?? own[0];
       if (cover) map[p.id] = cover.path;
       else if (p.cover_url) map[p.id] = p.cover_url;
     }
     return map;
-  }, [products, images]);
+  }, [products, imagesByProduct]);
 
-  const coverPaths = Object.values(coverByProduct);
+  const imageCountByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const id of Object.keys(imagesByProduct)) map[id] = imagesByProduct[id].length;
+    return map;
+  }, [imagesByProduct]);
+
+  const filtered = useMemo(
+    () => applyFilters(products, filters, { estimateByProduct: byProduct, imageCountByProduct }),
+    [products, filters, byProduct, imageCountByProduct],
+  );
+
+  // Only mount ~12 heavy estimate cards up front, then grow while scrolling.
+  const { visible, hasMore, sentinel } = useIncremental(filtered, 12);
+
+  const coverPaths = useMemo(
+    () => visible.map((p) => coverByProduct[p.id]).filter(Boolean),
+    [visible, coverByProduct],
+  );
   const { data: signed = {} } = useQuery({
     queryKey: ["signed", coverPaths.join(",")],
     queryFn: () => signPaths(coverPaths),
@@ -128,32 +153,24 @@ function EstimatesPage() {
     staleTime: 1000 * 60 * 60 * 6,
   });
 
-  const imageCountByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const i of images) map[i.product_id] = (map[i.product_id] ?? 0) + 1;
-    return map;
-  }, [images]);
-
-  const filtered = useMemo(
-    () => applyFilters(products, filters, { estimateByProduct: byProduct, imageCountByProduct }),
-    [products, filters, byProduct, imageCountByProduct],
+  const savedCount = useMemo(
+    () => products.filter((p) => isComplete(byProduct[p.id])).length,
+    [products, byProduct],
   );
-
-  const savedCount = products.filter((p) => isComplete(byProduct[p.id])).length;
 
   // Lightbox — stays on this page, no navigation, no scroll reset.
   const [viewer, setViewer] = useState<{ productId: string; index: number } | null>(null);
   const viewerProduct = products.find((p) => p.id === viewer?.productId);
   const viewerPaths = useMemo(() => {
     if (!viewer) return [] as string[];
-    const own = images.filter((i) => i.product_id === viewer.productId);
+    const own = imagesByProduct[viewer.productId] ?? [];
     const cover = viewerProduct?.cover_url;
     const sorted = [...own].sort((a, b) =>
       a.path === cover ? -1 : b.path === cover ? 1 : 0,
     );
     const paths = sorted.map((i) => i.path);
     return paths.length ? paths : cover ? [cover] : [];
-  }, [viewer, images, viewerProduct]);
+  }, [viewer, imagesByProduct, viewerProduct]);
 
   const { data: viewerSigned = {} } = useQuery({
     queryKey: ["signed", "viewer", viewerPaths.join(",")],
@@ -197,7 +214,7 @@ function EstimatesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((p) => (
+          {visible.map((p) => (
             <EstimateCard
               key={p.id}
               product={p}
@@ -207,6 +224,12 @@ function EstimatesPage() {
               onOpenImages={() => setViewer({ productId: p.id, index: 0 })}
             />
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div ref={sentinel} className="py-6 text-center text-xs text-muted-foreground">
+          Loading more products…
         </div>
       )}
 

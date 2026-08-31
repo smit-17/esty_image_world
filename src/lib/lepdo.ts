@@ -27,6 +27,8 @@ export type Product = {
   notes: string | null;
   cover_url: string | null;
   sku?: string | null;
+  qc_status?: string | null;
+  qc_updated_at?: string | null;
   subcategory?: string | null;
   product_type?: string | null;
   reference_url?: string | null;
@@ -497,4 +499,104 @@ export async function saveEstimate(
       { onConflict: "product_id" } as never,
     );
   if (error) throw error;
+}
+
+/* ------------------------------------------------------------------ */
+/* QC status + bulk actions (admin)                                    */
+/* ------------------------------------------------------------------ */
+
+export const QC_STATUSES = [
+  { value: "PENDING", label: "Pending" },
+  { value: "PASS", label: "Pass" },
+  { value: "HOLD", label: "Hold" },
+  { value: "REJECT", label: "Reject" },
+] as const;
+
+export type QcStatus = (typeof QC_STATUSES)[number]["value"];
+
+export function qcLabel(value?: string | null): string {
+  return QC_STATUSES.find((s) => s.value === (value ?? "PENDING"))?.label ?? "Pending";
+}
+
+/** Update QC status on one or many products. */
+export async function updateQcStatus(ids: string[], status: QcStatus) {
+  assertPerm("PRODUCT_UPDATE", "changing QC status");
+  if (!ids.length) return;
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("products" as never)
+    .update({
+      qc_status: status,
+      qc_updated_at: new Date().toISOString(),
+      qc_by: userData.user?.id ?? null,
+    } as never)
+    .in("id", ids);
+  if (error) throw error;
+}
+
+/** Bulk change the Etsy listing status. */
+export async function bulkListingStatus(ids: string[], status: EtsyStatus) {
+  assertPerm("PRODUCT_UPDATE", "changing listing status");
+  if (!ids.length) return;
+  const listed = status !== "not_listed";
+  const patch: Record<string, unknown> = { etsy_status: status, etsy_listed: listed };
+  if (!listed) {
+    patch.etsy_account = null;
+    patch.etsy_url = null;
+    patch.etsy_listed_by = null;
+    patch.etsy_listed_at = null;
+  } else {
+    patch.etsy_listed_at = new Date().toISOString();
+  }
+  const { error } = await supabase.from("products" as never).update(patch as never).in("id", ids);
+  if (error) throw error;
+}
+
+/** Bulk re-assign the owning team member. */
+export async function bulkAssign(ids: string[], member: string) {
+  assertPerm("PRODUCT_UPDATE", "assigning products");
+  if (!ids.length) return;
+  const { error } = await supabase
+    .from("products" as never)
+    .update({ team_member: member } as never)
+    .in("id", ids);
+  if (error) throw error;
+}
+
+/** Bulk delete products (and their stored images). */
+export async function bulkDeleteProducts(ids: string[]) {
+  assertPerm("PRODUCT_DELETE", "deleting products");
+  for (const id of ids) await deleteProduct(id);
+}
+
+/** Download images of several products as one zip, foldered per product. */
+export async function downloadProductsZip(
+  products: Product[],
+  imagesByProduct: Record<string, ProductImage[]>,
+  onProgress?: (done: number, total: number) => void,
+) {
+  assertCanDownload();
+  const all = products.flatMap((p) =>
+    (imagesByProduct[p.id] ?? []).map((img, i) => ({ p, img, i })),
+  );
+  if (!all.length) throw new Error("The selected products have no images to download");
+  const { default: JSZip } = await import("jszip");
+  const zip = new JSZip();
+  let done = 0;
+  const files = await Promise.all(
+    all.map(async (entry) => {
+      const { data } = await supabase.storage.from(BUCKET).download(entry.img.path);
+      done += 1;
+      onProgress?.(done, all.length);
+      return { ...entry, data };
+    }),
+  );
+  for (const { p, img, i, data } of files) {
+    if (!data) continue;
+    const ext = img.path.split(".").pop() ?? "webp";
+    const folder = `${p.sku ? `${p.sku}-` : ""}${slugify(p.name)}`;
+    zip.file(`${folder}/${slugify(p.name)}-${String(i + 1).padStart(2, "0")}.${ext}`, data);
+  }
+  const blob = await zip.generateAsync({ type: "blob" });
+  triggerDownload(blob, `lepdo-products-${products.length}.zip`);
 }
