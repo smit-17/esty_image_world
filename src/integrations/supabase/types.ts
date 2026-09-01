@@ -364,6 +364,11 @@ export type Database = {
           path: string
           position: number
           product_id: string
+          qc_by: string | null
+          qc_note: string | null
+          qc_reasons: string[]
+          qc_status: string
+          qc_updated_at: string | null
           size_bytes: number
           thumb_path: string | null
           uploaded_by: string | null
@@ -375,6 +380,11 @@ export type Database = {
           path: string
           position?: number
           product_id: string
+          qc_by?: string | null
+          qc_note?: string | null
+          qc_reasons?: string[]
+          qc_status?: string
+          qc_updated_at?: string | null
           size_bytes?: number
           thumb_path?: string | null
           uploaded_by?: string | null
@@ -386,6 +396,11 @@ export type Database = {
           path?: string
           position?: number
           product_id?: string
+          qc_by?: string | null
+          qc_note?: string | null
+          qc_reasons?: string[]
+          qc_status?: string
+          qc_updated_at?: string | null
           size_bytes?: number
           thumb_path?: string | null
           uploaded_by?: string | null

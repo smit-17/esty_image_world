@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Pencil, Trash2, ImageOff, Download, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,8 +27,15 @@ import { EtsyQuickStatus } from "@/components/EtsyPanel";
 import { ProductFilterBar } from "@/components/ProductFilterBar";
 import { ProductGallery } from "@/components/ProductGallery";
 import { QcBadge } from "@/components/QcBadge";
-import { applyFilters, ANY, EMPTY_FILTERS, type Filters } from "@/lib/filters";
-import { EstimateLine } from "@/components/EstimateSummary";
+import {
+  applyFilters,
+  ANY,
+  EMPTY_FILTERS,
+  recallView,
+  rememberView,
+  type Filters,
+} from "@/lib/filters";
+import { estimateTotals } from "@/components/EstimateSummary";
 import { useIncremental } from "@/hooks/useIncremental";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -73,7 +80,23 @@ export const Route = createFileRoute("/_app/products/")({
   component: ProductsPage,
 });
 
+/** Tiny weight status pill used on product cards. */
+function WeightPill({ estimate }: { estimate?: Parameters<typeof estimateTotals>[0] }) {
+  const { gold, diamond, hasData } = estimateTotals(estimate);
+  return (
+    <span
+      className={cn(
+        "shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[0.68rem] font-semibold tabular-nums",
+        hasData ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {hasData ? `${gold.toFixed(2)}g · ${diamond.toFixed(2)}ct` : "Weight: Pending"}
+    </span>
+  );
+}
+
 function ProductsPage() {
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { can, audit } = useAuth();
@@ -137,7 +160,10 @@ function ProductsPage() {
     return map;
   }, [products, imagesByProduct]);
 
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Filters, scroll position and rendered count survive a trip into a product
+  // detail page and back — nothing is reset or refetched on return.
+  const remembered = useRef(recallView("products"));
+  const [filters, setFilters] = useState<Filters>(remembered.current?.filters ?? EMPTY_FILTERS);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const filtered = useMemo(
@@ -146,7 +172,31 @@ function ProductsPage() {
   );
 
   // Render progressively: only ~30 cards mount up front, more as you scroll.
-  const { visible, hasMore, sentinel } = useIncremental(filtered, 30);
+  const { visible, hasMore, sentinel, count } = useIncremental(
+    filtered,
+    30,
+    remembered.current?.count,
+  );
+
+  // Keep the remembered view in sync so returning restores it instantly.
+  useEffect(() => {
+    const save = () => rememberView("products", { filters, scrollY: window.scrollY, count });
+    window.addEventListener("scroll", save, { passive: true });
+    save();
+    return () => {
+      save();
+      window.removeEventListener("scroll", save);
+    };
+  }, [filters, count]);
+
+  const restored = useRef(false);
+  useEffect(() => {
+    const y = remembered.current?.scrollY ?? 0;
+    if (restored.current || !y || !visible.length) return;
+    restored.current = true;
+    requestAnimationFrame(() => window.scrollTo({ top: y }));
+  }, [visible.length]);
+
 
   // Sign only the first (cover) thumbnail of the cards actually rendered; the
   // gallery signs the rest on demand when the arrows are used.
@@ -445,7 +495,7 @@ function ProductsPage() {
               <article
                 key={p.id}
                 className={cn(
-                  "surface group overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lift",
+                  "surface group flex h-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lift",
                   selected[p.id] && "ring-2 ring-primary",
                 )}
               >
@@ -470,27 +520,27 @@ function ProductsPage() {
                   </span>
                 </div>
 
-                <div className="space-y-1 p-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-md bg-primary/10 px-2 py-1 text-sm font-bold tabular-nums tracking-wide text-primary">
-                      SKU: {p.sku?.trim() || "—"}
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 line-clamp-2 text-sm font-bold leading-snug tracking-wide text-primary">
+                      SKU: {p.sku?.trim() || p.name}
                     </span>
-                    <QcBadge product={p} />
+                    <QcBadge product={p} className="shrink-0" />
                   </div>
-                  <h3 className="truncate pt-1 text-lg leading-snug">{p.name}</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="truncate text-xs text-muted-foreground">
                     {p.team_member} · {formatDate(p.created_at)} · {count}{" "}
-                    {count === 1 ? "image" : "images"}
+                    {count === 1 ? "Image" : "Images"}
+                    {p.etsy_account ? ` · ${p.etsy_account}` : ""}
                   </p>
-                  {p.etsy_account && (
-                    <p className="truncate text-xs text-muted-foreground">Etsy · {p.etsy_account}</p>
-                  )}
-                  <EstimateLine estimate={estimateByProduct[p.id]} />
-                  <div className="pt-1.5">
-                    <EtsyQuickStatus product={p} />
+                  <div className="flex items-center gap-2">
+                    <WeightPill estimate={estimateByProduct[p.id]} />
+                    <div className="min-w-0 flex-1">
+                      <EtsyQuickStatus product={p} />
+                    </div>
                   </div>
 
-                  <div className="flex gap-1.5 pt-2.5">
+                  <div className="mt-auto flex gap-1.5 pt-2">
+
                     <Button asChild size="sm" variant="secondary" className="flex-1 rounded-lg">
                       <Link to="/products/$id" params={{ id: p.id }}>
                         <Eye className="size-3.5" /> View

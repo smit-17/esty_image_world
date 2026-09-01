@@ -441,14 +441,15 @@ export function ProductForm({ product }: { product?: Product }) {
             </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <label className="text-eyebrow">Notes</label>
+            <label className="text-eyebrow">Product Note</label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Styling notes, prompt details, variations…"
+              placeholder="Special instructions / design note / internal note"
               maxLength={1000}
               className="min-h-24 rounded-xl"
             />
+            <p className="text-xs text-muted-foreground">Optional.</p>
           </div>
         </div>
       </div>

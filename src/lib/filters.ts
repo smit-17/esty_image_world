@@ -56,6 +56,19 @@ export const LISTING_STATUSES = [
   { value: "deactivated", label: "Deactivated" },
 ] as const;
 
+export const QC_OPTIONS = [
+  { value: "PENDING", label: "Pending" },
+  { value: "PASS", label: "Pass" },
+  { value: "HOLD", label: "Hold" },
+  { value: "REJECT", label: "Reject" },
+] as const;
+
+export const WEIGHT_OPTIONS = [
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+] as const;
+
+
 export const DATE_PRESETS = [
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
@@ -65,14 +78,23 @@ export const DATE_PRESETS = [
 ] as const;
 
 export const SORTS = [
+  { value: "sku_asc", label: "SKU: 1 → 100" },
+  { value: "sku_desc", label: "SKU: 100 → 1" },
+  { value: "sku_az", label: "SKU: A → Z" },
+  { value: "sku_za", label: "SKU: Z → A" },
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
-  { value: "sku", label: "SKU" },
   { value: "category", label: "Category" },
   { value: "updated", label: "Recently Updated" },
 ] as const;
 
 export type SortKey = (typeof SORTS)[number]["value"];
+
+/** Natural comparison: RING-1 < RING-2 < RING-10, and 1 < 2 < 10 < 100. */
+export function naturalCompare(a: string, b: string) {
+  return (a || "").localeCompare(b || "", undefined, { numeric: true, sensitivity: "base" });
+}
+
 
 /* ---------------- filter state ---------------- */
 
@@ -85,9 +107,10 @@ export type Filters = {
   subcategory: string;
   productType: string;
   sku: string;
-  member: string;
-  listing: string;
-  weight: string; // ANY | completed | pending
+  member: string[];
+  listing: string[];
+  qc: string[];
+  weight: string[]; // completed | pending
   metalType: string;
   metalKarat: string;
   metalColour: string;
@@ -113,9 +136,10 @@ export const EMPTY_FILTERS: Filters = {
   subcategory: ANY,
   productType: ANY,
   sku: "",
-  member: ANY,
-  listing: ANY,
-  weight: ANY,
+  member: [],
+  listing: [],
+  qc: [],
+  weight: [],
   metalType: ANY,
   metalKarat: ANY,
   metalColour: ANY,
@@ -132,6 +156,15 @@ export const EMPTY_FILTERS: Filters = {
   sort: "newest",
 };
 
+export const MULTI_KEYS = ["member", "listing", "qc", "weight"] as const;
+export type MultiKey = (typeof MULTI_KEYS)[number];
+
+export function toggleMulti(f: Filters, key: MultiKey, value: string): Filters {
+  const cur = f[key] ?? [];
+  const next = cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value];
+  return { ...f, [key]: next };
+}
+
 const LABELS: Partial<Record<keyof Filters, string>> = {
   q: "Search",
   date: "Date",
@@ -141,6 +174,7 @@ const LABELS: Partial<Record<keyof Filters, string>> = {
   sku: "SKU",
   member: "Created by",
   listing: "Listing",
+  qc: "QC",
   weight: "Weight",
   metalType: "Metal",
   metalKarat: "Karat",
@@ -157,12 +191,23 @@ const LABELS: Partial<Record<keyof Filters, string>> = {
   imagesMax: "Images max",
 };
 
-export type Chip = { key: keyof Filters; label: string; value: string };
+export type Chip = { key: keyof Filters; label: string; value: string; item?: string };
 
 export function activeChips(f: Filters): Chip[] {
   const chips: Chip[] = [];
   (Object.keys(LABELS) as (keyof Filters)[]).forEach((key) => {
-    const v = String(f[key] ?? "");
+    const raw = f[key];
+    if (Array.isArray(raw)) {
+      raw.forEach((item) => {
+        let text = item;
+        if (key === "listing") text = LISTING_STATUSES.find((s) => s.value === item)?.label ?? item;
+        if (key === "qc") text = QC_OPTIONS.find((s) => s.value === item)?.label ?? item;
+        if (key === "weight") text = WEIGHT_OPTIONS.find((s) => s.value === item)?.label ?? item;
+        chips.push({ key, label: LABELS[key]!, value: text, item });
+      });
+      return;
+    }
+    const v = String(raw ?? "");
     if (!v || v === ANY) return;
     let text = v;
     if (key === "date") {
@@ -171,14 +216,15 @@ export function activeChips(f: Filters): Chip[] {
           ? `${f.from || "…"} → ${f.to || "…"}`
           : (DATE_PRESETS.find((d) => d.value === v)?.label ?? v);
     }
-    if (key === "listing") text = LISTING_STATUSES.find((s) => s.value === v)?.label ?? v;
-    if (key === "weight") text = v === "completed" ? "Completed" : "Pending";
     chips.push({ key, label: LABELS[key]!, value: text });
   });
   return chips;
 }
 
-export function clearChip(f: Filters, key: keyof Filters): Filters {
+export function clearChip(f: Filters, key: keyof Filters, item?: string): Filters {
+  if (item && Array.isArray(f[key])) {
+    return { ...f, [key]: (f[key] as string[]).filter((v) => v !== item) } as Filters;
+  }
   const next = { ...f, [key]: EMPTY_FILTERS[key] } as Filters;
   if (key === "date") {
     next.from = "";
@@ -190,6 +236,7 @@ export function clearChip(f: Filters, key: keyof Filters): Filters {
 export function countActive(f: Filters): number {
   return activeChips(f).length;
 }
+
 
 /* ---------------- filtering engine ---------------- */
 
@@ -260,16 +307,21 @@ export function applyFilters(products: Product[], f: Filters, ctx: FilterContext
     if (f.category !== ANY && p.category !== f.category) return false;
     if (f.subcategory !== ANY && (p.subcategory ?? "") !== f.subcategory) return false;
     if (f.productType !== ANY && (p.product_type ?? "") !== f.productType) return false;
-    if (f.member !== ANY && p.team_member !== f.member) return false;
+    if (f.member.length && !f.member.includes(p.team_member)) return false;
 
-    if (f.listing !== ANY) {
+    if (f.listing.length) {
       const status = p.etsy_status ?? "not_listed";
-      if (f.listing === "listed" ? status === "not_listed" : status !== f.listing) return false;
+      const ok = f.listing.some((sel) =>
+        sel === "listed" ? status !== "not_listed" : status === sel,
+      );
+      if (!ok) return false;
     }
-    if (f.weight !== ANY) {
-      if (f.weight === "completed" && !complete) return false;
-      if (f.weight === "pending" && complete) return false;
+    if (f.qc.length && !f.qc.includes((p.qc_status ?? "PENDING").toUpperCase())) return false;
+    if (f.weight.length) {
+      const ok = f.weight.some((sel) => (sel === "completed" ? complete : !complete));
+      if (!ok) return false;
     }
+
 
     if (f.metalType !== ANY && (est?.metal_type ?? "") !== f.metalType) return false;
     if (f.metalKarat !== ANY && (est?.metal_karat ?? "") !== f.metalKarat) return false;
@@ -288,12 +340,25 @@ export function applyFilters(products: Product[], f: Filters, ctx: FilterContext
   });
 
   const sorted = [...list];
+  const skuOf = (p: Product) => (p.sku ?? "").trim();
   sorted.sort((a, b) => {
     switch (f.sort) {
       case "oldest":
         return +new Date(a.created_at) - +new Date(b.created_at);
-      case "sku":
-        return (a.sku ?? "~").localeCompare(b.sku ?? "~");
+      case "sku_asc":
+      case "sku_desc":
+      case "sku_az":
+      case "sku_za": {
+        const x = skuOf(a);
+        const y = skuOf(b);
+        if (!x !== !y) return x ? -1 : 1; // blanks last
+        const alpha = f.sort === "sku_az" || f.sort === "sku_za";
+        const cmp = alpha
+          ? x.localeCompare(y, undefined, { sensitivity: "base" })
+          : naturalCompare(x, y);
+        const dir = f.sort === "sku_desc" || f.sort === "sku_za" ? -1 : 1;
+        return dir * (cmp || naturalCompare(a.name, b.name));
+      }
       case "category":
         return a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
       case "updated":
@@ -302,6 +367,7 @@ export function applyFilters(products: Product[], f: Filters, ctx: FilterContext
         return +new Date(b.created_at) - +new Date(a.created_at);
     }
   });
+
   return sorted;
 }
 
@@ -324,4 +390,17 @@ export function loadPresets(scope: string): Preset[] {
 export function savePresets(scope: string, presets: Preset[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key(scope), JSON.stringify(presets));
+}
+
+/* ---------------- session state (survives product detail round-trip) ---------------- */
+
+type ViewState = { filters: Filters; scrollY: number; count?: number };
+const viewState = new Map<string, ViewState>();
+
+export function rememberView(scope: string, state: ViewState) {
+  viewState.set(scope, state);
+}
+
+export function recallView(scope: string): ViewState | undefined {
+  return viewState.get(scope);
 }

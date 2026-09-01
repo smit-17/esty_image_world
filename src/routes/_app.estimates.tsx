@@ -1,32 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Loader2, Check, ImageOff, Clock } from "lucide-react";
+import { Loader2, Check, ImageOff, Clock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ProductFilterBar } from "@/components/ProductFilterBar";
-import {
-  ANY,
-  applyFilters,
-  DIAMOND_CLARITIES,
-  DIAMOND_COLOURS,
-  DIAMOND_SHAPES,
-  DIAMOND_TYPES,
-  EMPTY_FILTERS,
-  METAL_COLOURS,
-  METAL_KARATS,
-  METAL_TYPES,
-  type Filters,
-} from "@/lib/filters";
+import { applyFilters, EMPTY_FILTERS, type Filters } from "@/lib/filters";
+
 import {
   fetchCategories,
   fetchTeam,
@@ -41,6 +23,7 @@ import {
 } from "@/lib/lepdo";
 import { cn } from "@/lib/utils";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { ProductNote } from "@/components/ProductNote";
 import { useIncremental } from "@/hooks/useIncremental";
 
 export const Route = createFileRoute("/_app/estimates")({
@@ -157,6 +140,13 @@ function EstimatesPage() {
     () => products.filter((p) => isComplete(byProduct[p.id])).length,
     [products, byProduct],
   );
+  const totalCount = products.length;
+  const pendingCount = totalCount - savedCount;
+  const pct = totalCount ? (savedCount / totalCount) * 100 : 0;
+  const weightSel = filters.weight[0] ?? "all";
+  const setWeight = (v: "all" | "completed" | "pending") =>
+    setFilters((f) => ({ ...f, weight: v === "all" ? [] : [v] }));
+
 
   // Lightbox — stays on this page, no navigation, no scroll reset.
   const [viewer, setViewer] = useState<{ productId: string; index: number } | null>(null);
@@ -184,13 +174,79 @@ function EstimatesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="min-w-0">
-        <p className="text-eyebrow">Estimates</p>
-        <h1 className="mt-1 text-3xl text-primary lg:text-4xl">Metal &amp; Diamond Estimate</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {savedCount} saved · {products.length - savedCount} pending of {products.length} products
-        </p>
+      <header className="min-w-0 space-y-3">
+        <div>
+          <p className="text-eyebrow">Estimates</p>
+          <h1 className="mt-1 text-3xl text-primary lg:text-4xl">Metal &amp; Diamond Estimate</h1>
+        </div>
+
+        {/* Quick status tabs */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { key: "all", label: "All", count: totalCount },
+              { key: "pending", label: "Pending", count: pendingCount },
+              { key: "completed", label: "Completed", count: savedCount },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setWeight(t.key)}
+              aria-pressed={weightSel === t.key}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+                weightSel === t.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70",
+              )}
+            >
+              {t.label} <span className="tabular-nums">{t.count}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Compact status cards */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatusCard
+            label="Total Products"
+            value={totalCount}
+            active={weightSel === "all"}
+            onClick={() => setWeight("all")}
+          />
+          <StatusCard
+            label="Completed"
+            value={savedCount}
+            active={weightSel === "completed"}
+            onClick={() => setWeight("completed")}
+            tone="done"
+          />
+          <StatusCard
+            label="Pending"
+            value={pendingCount}
+            active={weightSel === "pending"}
+            onClick={() => setWeight("pending")}
+            tone="pending"
+          />
+          <div className="surface flex flex-col justify-center gap-2 px-4 py-3">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                Completion
+              </span>
+              <span className="text-lg font-semibold tabular-nums text-primary">
+                {pct.toFixed(1)}%
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[0.7rem] tabular-nums text-muted-foreground">
+              {savedCount} / {totalCount} Completed
+            </span>
+          </div>
+        </div>
       </header>
+
 
       <ProductFilterBar
         scope="estimates"
@@ -246,7 +302,44 @@ function EstimatesPage() {
   );
 }
 
+/** Big, clickable status tile that drives the weight-status filter. */
+function StatusCard({
+  label,
+  value,
+  active,
+  onClick,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  active: boolean;
+  onClick: () => void;
+  tone?: "neutral" | "done" | "pending";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "surface px-4 py-3 text-left transition hover:shadow-md",
+        active && "ring-2 ring-primary",
+        tone === "done" && "bg-primary/5",
+        tone === "pending" && "bg-gold/10",
+      )}
+    >
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className="mt-0.5 block text-2xl font-semibold tabular-nums text-primary lg:text-3xl">
+        {value}
+      </span>
+    </button>
+  );
+}
+
 function EstimateCard({
+
   product,
   cover,
   estimate,
@@ -259,16 +352,12 @@ function EstimateCard({
   onSaved: () => void;
   onOpenImages: () => void;
 }) {
+  const initialRows = (e?: ProductEstimate): DiamondRow[] => {
+    const rows = (e?.diamonds ?? []).filter((r) => r);
+    return rows.length ? rows.map((r) => ({ ...newRow(), ...r })) : [newRow()];
+  };
   const [gold, setGold] = useState(estimate?.gold_weight ? String(estimate.gold_weight) : "");
-  const [rows, setRows] = useState<DiamondRow[]>(
-    estimate?.diamonds?.length ? estimate.diamonds : [newRow()],
-  );
-  const [meta, setMeta] = useState({
-    metal_type: estimate?.metal_type ?? "",
-    metal_karat: estimate?.metal_karat ?? "14KT",
-    metal_colour: estimate?.metal_colour ?? "",
-    diamond_type: estimate?.diamond_type ?? "",
-  });
+  const [rows, setRows] = useState<DiamondRow[]>(initialRows(estimate));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -276,37 +365,29 @@ function EstimateCard({
   useEffect(() => {
     if (dirty || !estimate) return;
     setGold(estimate.gold_weight ? String(estimate.gold_weight) : "");
-    setRows(estimate.diamonds?.length ? estimate.diamonds : [newRow()]);
-    setMeta({
-      metal_type: estimate.metal_type ?? "",
-      metal_karat: estimate.metal_karat ?? "14KT",
-      metal_colour: estimate.metal_colour ?? "",
-      diamond_type: estimate.diamond_type ?? "",
-    });
+    setRows(initialRows(estimate));
   }, [estimate, dirty]);
 
-  const total = rows.reduce((sum, r) => sum + toNum(r.weight), 0);
+  const totalDiamond = rows.reduce((s, r) => s + toNum(r.weight), 0);
   const done = isComplete(estimate);
 
-  function update(id: string, patch: Partial<DiamondRow>) {
+  const onlyNum = (v: string) => v.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+
+  function updateRow(id: string, patch: Partial<DiamondRow>) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
     setDirty(true);
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
   async function save() {
     setSaving(true);
     try {
-      await saveEstimate(
-        product.id,
-        toNum(gold),
-        rows.filter((r) => r.weight.trim() || r.note.trim()),
-        {
-          metal_type: meta.metal_type || null,
-          metal_karat: meta.metal_karat || null,
-          metal_colour: meta.metal_colour || null,
-          diamond_type: meta.diamond_type || null,
-        },
-      );
+      const clean = rows.filter((r) => toNum(r.weight) > 0 || r.note.trim());
+      await saveEstimate(product.id, toNum(gold), clean, {
+        metal_type: estimate?.metal_type ?? null,
+        metal_karat: estimate?.metal_karat ?? null,
+        metal_colour: estimate?.metal_colour ?? null,
+        diamond_type: estimate?.diamond_type ?? null,
+      });
       setDirty(false);
       onSaved();
       toast.success(`Saved · ${product.name}`);
@@ -316,6 +397,8 @@ function EstimateCard({
       setSaving(false);
     }
   }
+
+
 
   return (
     <section className="surface flex min-w-0 flex-col overflow-hidden">
@@ -340,8 +423,8 @@ function EstimateCard({
         </div>
       </button>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
-        <header className="min-w-0 space-y-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+        <header className="min-w-0 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="min-w-0 flex-1 truncate text-base leading-snug">{product.name}</h2>
             <span
@@ -361,128 +444,72 @@ function EstimateCard({
           </p>
         </header>
 
-        <div className="grid grid-cols-2 gap-2">
-          <MetaSelect
-            label="Metal type"
-            value={meta.metal_type}
-            options={METAL_TYPES}
-            onChange={(v) => {
-              setMeta((m) => ({ ...m, metal_type: v }));
-              setDirty(true);
-            }}
-          />
-          <MetaSelect
-            label="Karat"
-            value={meta.metal_karat}
-            options={METAL_KARATS}
-            onChange={(v) => {
-              setMeta((m) => ({ ...m, metal_karat: v }));
-              setDirty(true);
-            }}
-          />
-          <MetaSelect
-            label="Metal colour"
-            value={meta.metal_colour}
-            options={METAL_COLOURS}
-            onChange={(v) => {
-              setMeta((m) => ({ ...m, metal_colour: v }));
-              setDirty(true);
-            }}
-          />
-          <MetaSelect
-            label="Diamond type"
-            value={meta.diamond_type}
-            options={DIAMOND_TYPES}
-            onChange={(v) => {
-              setMeta((m) => ({ ...m, diamond_type: v }));
-              setDirty(true);
-            }}
-          />
-        </div>
+        <ProductNote note={product.notes} />
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">
-            {meta.metal_karat || "14KT"} {meta.metal_type || "Gold"} Weight (gm)
-          </span>
+
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">14KT Gold Weight (gm)</span>
           <Input
             inputMode="decimal"
             value={gold}
             onChange={(e) => {
-              setGold(e.target.value);
+              setGold(onlyNum(e.target.value));
               setDirty(true);
             }}
-            placeholder="0.00"
-            className="h-11 rounded-xl tabular-nums"
+            placeholder="3.25"
+            className="h-10 rounded-xl tabular-nums"
           />
         </label>
 
-        <div className="space-y-2">
-          <span className="text-xs font-medium text-muted-foreground">Diamond Weight (ct)</span>
+        <div className="space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Diamond Weight</span>
           {rows.map((r) => (
-            <div key={r.id} className="grid grid-cols-[minmax(0,5rem)_minmax(0,1fr)_auto] gap-2">
+            <div key={r.id} className="flex items-center gap-1.5">
               <Input
                 inputMode="decimal"
                 value={r.weight}
-                onChange={(e) => update(r.id, { weight: e.target.value })}
-                placeholder="ct"
-                className="h-11 rounded-xl tabular-nums"
-                aria-label="Diamond weight in carats"
+                onChange={(e) => updateRow(r.id, { weight: onlyNum(e.target.value) })}
+                placeholder="0.50"
+                className="h-9 w-20 shrink-0 rounded-lg tabular-nums"
               />
               <Input
                 value={r.note}
-                onChange={(e) => update(r.id, { note: e.target.value })}
-                placeholder="Size / details"
-                className="h-11 min-w-0 rounded-xl"
-                aria-label="Diamond note"
+                onChange={(e) => updateRow(r.id, { note: e.target.value })}
+                placeholder="Details / Size"
+                className="h-9 min-w-0 flex-1 rounded-lg"
               />
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                className="size-11 shrink-0 rounded-xl text-destructive hover:text-destructive"
+                aria-label="Delete diamond row"
                 onClick={() => {
+                  setRows((prev) =>
+                    prev.length > 1 ? prev.filter((x) => x.id !== r.id) : [newRow()],
+                  );
                   setDirty(true);
-                  setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.id !== r.id) : [newRow()]));
                 }}
-                aria-label="Remove diamond row"
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive"
               >
                 <Trash2 className="size-4" />
-              </Button>
-              <div className="col-span-3 grid grid-cols-3 gap-2">
-                <MetaSelect
-                  label="Shape"
-                  value={r.shape ?? ""}
-                  options={DIAMOND_SHAPES}
-                  onChange={(v) => update(r.id, { shape: v })}
-                />
-                <MetaSelect
-                  label="Colour"
-                  value={r.colour ?? ""}
-                  options={DIAMOND_COLOURS}
-                  onChange={(v) => update(r.id, { colour: v })}
-                />
-                <MetaSelect
-                  label="Clarity"
-                  value={r.clarity ?? ""}
-                  options={DIAMOND_CLARITIES}
-                  onChange={(v) => update(r.id, { clarity: v })}
-                />
-              </div>
+              </button>
             </div>
           ))}
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-10 w-full rounded-xl"
-            onClick={() => setRows((rs) => [...rs, newRow()])}
-          >
-            <Plus className="size-4" /> Add Diamond
-          </Button>
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setRows((prev) => [...prev, newRow()]);
+                setDirty(true);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Diamond Row
+            </button>
+            <span className="text-xs font-semibold tabular-nums text-primary">
+              Total: {totalDiamond.toFixed(2)} ct
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Total Diamond Weight</span>
-          <span className="text-sm tabular-nums">{total.toFixed(3)} ct</span>
-        </div>
 
         <Button onClick={save} disabled={saving} className="mt-auto h-11 w-full rounded-full">
           {saving ? (
@@ -490,43 +517,10 @@ function EstimateCard({
           ) : !dirty && done ? (
             <Check className="size-4" />
           ) : null}
-          {estimate ? "Update" : "Save"}
+          Save
         </Button>
       </div>
-    </section>
-  );
-}
 
-/** Small labelled dropdown used for metal + diamond attributes. */
-function MetaSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: readonly string[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="block min-w-0 space-y-1">
-      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      <Select value={value || ANY} onValueChange={(v) => onChange(v === ANY ? "" : v)}>
-        <SelectTrigger className="h-10 rounded-xl text-xs">
-          <SelectValue placeholder={label} />
-        </SelectTrigger>
-        <SelectContent className="max-h-60">
-          <SelectItem value={ANY}>—</SelectItem>
-          {options.map((o) => (
-            <SelectItem key={o} value={o}>
-              {o}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
+    </section>
   );
 }

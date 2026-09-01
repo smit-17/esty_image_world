@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -30,6 +30,12 @@ import { EtsyPanel } from "@/components/EtsyPanel";
 import { EstimatePanel } from "@/components/EstimateSummary";
 import { QcBadge } from "@/components/QcBadge";
 import {
+  ImageQcControls,
+  ImageSelectBox,
+  imageQcOf,
+  useImageQcMutation,
+} from "@/components/ImageQc";
+import {
   deleteProduct,
   downloadProductImages,
   downloadSingleImage,
@@ -37,6 +43,7 @@ import {
   fetchImages,
   fetchProduct,
   formatBytes,
+  QC_STATUSES,
   formatDate,
   signPaths,
   type ProductImage,
@@ -67,6 +74,8 @@ function ProductDetailPage() {
   const [zipping, setZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const applyQc = useImageQcMutation(id);
 
   const { data: product } = useQuery({ queryKey: ["product", id], queryFn: () => fetchProduct(id) });
   const { data: images = [] } = useQuery({
@@ -92,6 +101,15 @@ function ProductDetailPage() {
     enabled: !!lightbox,
     staleTime: 1000 * 60 * 60 * 6,
   });
+
+  const qcCounts = useMemo(() => {
+    const c = { PENDING: 0, PASS: 0, HOLD: 0, REJECT: 0 } as Record<string, number>;
+    images.forEach((i) => {
+      const s = imageQcOf(i);
+      c[s] = (c[s] ?? 0) + 1;
+    });
+    return c;
+  }, [images]);
 
   const totalBytes = images.reduce((s, i) => s + Number(i.size_bytes ?? 0), 0);
 
@@ -213,9 +231,9 @@ function ProductDetailPage() {
         </div>
       )}
 
-      {product.notes && (
+      {product.notes?.trim() && (
         <div className="surface p-6">
-          <p className="text-eyebrow">Notes</p>
+          <p className="text-eyebrow">Product Note</p>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{product.notes}</p>
         </div>
       )}
@@ -226,47 +244,115 @@ function ProductDetailPage() {
           <p className="text-sm text-muted-foreground">No images attached to this product yet.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {images.map((img, index) => {
-            const url = signed[img.thumb_path ?? img.path];
-            return (
-              <figure key={img.id} className="surface group relative aspect-square overflow-hidden">
-                {url ? (
-                  <button
-                    type="button"
-                    onClick={() => setLightboxIndex(index)}
-                    className="size-full"
-                    aria-label={`Open ${product.name} image`}
-                  >
-                    <img
-                      src={url}
-                      alt={product.name}
-                      loading="lazy"
-                      decoding="async"
-                      className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </button>
-                ) : (
-                  <div className="size-full animate-pulse bg-muted" />
-                )}
-                <button
-                  type="button"
-                  onClick={() => downloadOne(img, index)}
-                  disabled={downloadingId === img.id}
-                  className="absolute bottom-3 right-3 flex size-9 items-center justify-center rounded-full bg-background/90 text-primary opacity-0 shadow-soft transition-opacity group-hover:opacity-100"
-                  aria-label="Download original image"
+        <>
+          <div className="surface flex flex-wrap items-center gap-x-4 gap-y-2 p-4 text-sm">
+            <span className="text-eyebrow">Image QC</span>
+            <span className="font-semibold tabular-nums">Images: {images.length}</span>
+            <span className="tabular-nums text-emerald-700">Pass: {qcCounts.PASS}</span>
+            <span className="tabular-nums text-muted-foreground">Pending: {qcCounts.PENDING}</span>
+            <span className="tabular-nums text-amber-700">Hold: {qcCounts.HOLD}</span>
+            <span className="tabular-nums text-destructive">Reject: {qcCounts.REJECT}</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-full"
+                onClick={() =>
+                  setSelected(
+                    selected.length === images.length ? [] : images.map((i) => i.id),
+                  )
+                }
+              >
+                {selected.length === images.length ? "Clear selection" : "Select all"}
+              </Button>
+            </div>
+          </div>
+
+          {selected.length > 0 && (
+            <div className="surface sticky top-2 z-20 flex flex-wrap items-center gap-2 p-3">
+              <span className="text-sm font-medium tabular-nums">{selected.length} selected</span>
+              {QC_STATUSES.map((s) => (
+                <Button
+                  key={s.value}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 rounded-full"
+                  onClick={() => {
+                    void applyQc(selected, s.value);
+                    setSelected([]);
+                  }}
                 >
-                  {downloadingId === img.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Download className="size-4" />
-                  )}
-                </button>
-              </figure>
-            );
-          })}
-        </div>
+                  {s.label}
+                </Button>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 rounded-full"
+                onClick={() => setSelected([])}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {images.map((img, index) => {
+              const url = signed[img.thumb_path ?? img.path];
+              const isSelected = selected.includes(img.id);
+              return (
+                <figure key={img.id} className="surface group overflow-hidden">
+                  <div className="relative aspect-square">
+                    <ImageSelectBox
+                      checked={isSelected}
+                      onChange={(v) =>
+                        setSelected((cur) =>
+                          v ? [...cur, img.id] : cur.filter((id) => id !== img.id),
+                        )
+                      }
+                    />
+                    {url ? (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxIndex(index)}
+                        className="size-full"
+                        aria-label={`Open ${product.name} image`}
+                      >
+                        <img
+                          src={url}
+                          alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </button>
+                    ) : (
+                      <div className="size-full animate-pulse bg-muted" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => downloadOne(img, index)}
+                      disabled={downloadingId === img.id}
+                      className="absolute bottom-3 right-3 flex size-9 items-center justify-center rounded-full bg-background/90 text-primary opacity-0 shadow-soft transition-opacity group-hover:opacity-100"
+                      aria-label="Download original image"
+                    >
+                      {downloadingId === img.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Download className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  <figcaption className="border-t p-2">
+                    <ImageQcControls image={img} onApply={(ids, status, extra) => void applyQc(ids, status, extra)} />
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </>
       )}
+
 
       <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightboxIndex(null)}>
         <DialogContent className="max-w-4xl overflow-hidden rounded-2xl p-2">

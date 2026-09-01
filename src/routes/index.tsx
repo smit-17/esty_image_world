@@ -48,11 +48,14 @@ function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    let res = await signIn(email, password);
+    const identifier = email.trim().includes("@")
+      ? email.trim()
+      : `${email.trim().toLowerCase()}@lepdo.local`;
+    let res = await signIn(identifier, password);
     if (res.error) {
       // Super Admin fallback: provision/repair the account from the env password.
-      const boot = await bootstrapSuperAdmin({ data: { email, password } });
-      if (boot.ok) res = await signIn(email, password);
+      const boot = await bootstrapSuperAdmin({ data: { email: identifier, password } });
+      if (boot.ok) res = await signIn(identifier, password);
     }
     setBusy(false);
     if (res.error) setError(res.error);
@@ -77,14 +80,14 @@ function LoginPage() {
         <form onSubmit={onSubmit} className="surface mt-9 space-y-4 p-7">
           <div className="space-y-2">
             <label htmlFor="email" className="text-eyebrow">
-              Email
+              Email or username
             </label>
             <Input
               id="email"
-              type="email"
-              autoComplete="email"
+              type="text"
+              autoComplete="username"
               required
-              placeholder="you@example.com"
+              placeholder="you@example.com or username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 rounded-xl"

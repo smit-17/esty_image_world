@@ -4,19 +4,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Render long lists progressively: start with `step` items and grow as the
  * sentinel scrolls into view. Keeps huge grids (600+ products) instant to open.
  */
-export function useIncremental<T>(items: T[], step = 30) {
-  const [count, setCount] = useState(step);
+export function useIncremental<T>(items: T[], step = 30, initial?: number) {
+  const [count, setCount] = useState(Math.max(step, initial ?? step));
   const sentinel = useRef<HTMLDivElement | null>(null);
+  const first = useRef(true);
 
   // Reset when the underlying list changes (filters, search, sort).
   const key = items.length;
   useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
     setCount(step);
   }, [key, step]);
 
   const more = useCallback(() => {
     setCount((c) => (c >= items.length ? c : c + step));
   }, [items.length, step]);
+
 
   useEffect(() => {
     const node = sentinel.current;
@@ -34,7 +40,9 @@ export function useIncremental<T>(items: T[], step = 30) {
   return {
     visible: count >= items.length ? items : items.slice(0, count),
     hasMore: count < items.length,
+    count,
     sentinel,
     more,
   };
 }
+

@@ -13,6 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { createUserAccount } from "@/lib/superadmin.functions";
 import { STATUS_LABEL, useAuth, type UserStatus } from "@/lib/auth";
 import { assignRole, fetchRoles, fetchUsers, removeRole, setUserStatus } from "@/lib/admin";
 
@@ -41,7 +50,7 @@ const STATUSES: UserStatus[] = [
 
 function UsersPage() {
   const qc = useQueryClient();
-  const { can, audit, user } = useAuth();
+  const { can, audit, user, isSuperAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -119,6 +128,12 @@ function UsersPage() {
           </SelectContent>
         </Select>
         <span className="text-xs text-muted-foreground">{rows.length} accounts</span>
+        {isSuperAdmin && (
+          <AddUserDialog
+            roles={roles.data ?? []}
+            onCreated={() => qc.invalidateQueries({ queryKey: ["admin-users"] })}
+          />
+        )}
       </div>
 
       <div className="surface overflow-x-auto">
@@ -201,5 +216,130 @@ function UsersPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+function AddUserDialog({
+  roles,
+  onCreated,
+}: {
+  roles: { id: string; name: string }[];
+  onCreated: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    username: "",
+    email: "",
+    password: "",
+    roleId: "none",
+    status: "ACTIVE" as UserStatus,
+  });
+
+  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+
+  async function submit() {
+    setBusy(true);
+    try {
+      const res = await createUserAccount({
+        data: {
+          fullName: form.fullName,
+          username: form.username,
+          email: form.email || null,
+          password: form.password,
+          roleId: form.roleId === "none" ? null : form.roleId,
+          status: form.status,
+        },
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`User created · ${res.username}`);
+      setForm({ fullName: "", username: "", email: "", password: "", roleId: "none", status: "ACTIVE" });
+      setOpen(false);
+      onCreated();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="ml-auto h-10 rounded-xl">+ Add User</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create user</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input
+            placeholder="Name"
+            value={form.fullName}
+            onChange={(e) => set({ fullName: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+          <Input
+            placeholder="Username (e.g. metal01)"
+            value={form.username}
+            onChange={(e) => set({ username: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+          <Input
+            placeholder="Email (optional)"
+            value={form.email}
+            onChange={(e) => set({ email: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+          <Input
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) => set({ password: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+          <Select value={form.roleId} onValueChange={(v) => set({ roleId: v })}>
+            <SelectTrigger className="h-11 rounded-xl">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No role</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={form.status} onValueChange={(v) => set({ status: v as UserStatus })}>
+            <SelectTrigger className="h-11 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Without an email the user signs in with their username and password.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={submit}
+            disabled={busy || !form.username.trim() || !form.password.trim()}
+            className="w-full rounded-full"
+          >
+            {busy ? "Creating…" : "Create user"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

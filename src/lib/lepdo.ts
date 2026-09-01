@@ -51,7 +51,12 @@ export type ProductImage = {
   size_bytes: number;
   position: number;
   created_at: string;
+  qc_status?: string | null;
+  qc_reasons?: string[] | null;
+  qc_note?: string | null;
+  qc_updated_at?: string | null;
 };
+
 
 export type Category = { id: string; name: string; created_at: string };
 export type TeamMember = { id: string; name: string; email: string | null; created_at: string };
@@ -487,6 +492,7 @@ export async function saveEstimate(
   diamonds: DiamondRow[],
   meta: EstimateMeta = {},
 ) {
+  assertPerm("ESTIMATE_ADD", "saving metal & diamond weights");
   const { error } = await supabase
     .from("product_estimates" as never)
     .upsert(
@@ -599,4 +605,54 @@ export async function downloadProductsZip(
   }
   const blob = await zip.generateAsync({ type: "blob" });
   triggerDownload(blob, `lepdo-products-${products.length}.zip`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Image-level QC                                                      */
+/* ------------------------------------------------------------------ */
+
+export const IMAGE_QC_REASONS = [
+  "Jewelry Too Small",
+  "Jewelry Too Large",
+  "Jewelry Not Clear",
+  "Design Incorrect",
+  "Diamond/Stone Incorrect",
+  "Metal Color Incorrect",
+  "Poor Positioning",
+  "Bad Background",
+  "Looks Unrealistic",
+  "Poor Quality",
+  "Not Attractive",
+  "Ugly / Bad Design",
+  "Wrong Product",
+  "Duplicate Image",
+  "Other",
+] as const;
+
+/** Update QC status (and optional reasons/note) on one or many images. */
+export async function updateImageQc(
+  ids: string[],
+  status: QcStatus,
+  extra?: { reasons?: string[]; note?: string | null },
+) {
+  assertPerm("PRODUCT_UPDATE", "changing image QC status");
+  if (!ids.length) return;
+  const { data: userData } = await supabase.auth.getUser();
+  const patch: Record<string, unknown> = {
+    qc_status: status,
+    qc_updated_at: new Date().toISOString(),
+    qc_by: userData.user?.id ?? null,
+  };
+  if (extra) {
+    patch.qc_reasons = extra.reasons ?? [];
+    patch.qc_note = extra.note ?? null;
+  } else if (status === "PASS" || status === "PENDING") {
+    patch.qc_reasons = [];
+    patch.qc_note = null;
+  }
+  const { error } = await supabase
+    .from("product_images" as never)
+    .update(patch as never)
+    .in("id", ids);
+  if (error) throw error;
 }
