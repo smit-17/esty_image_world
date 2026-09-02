@@ -18,7 +18,10 @@ import { cn } from "@/lib/utils";
 import {
   IMAGE_QC_REASONS,
   QC_STATUSES,
+  deriveProductQc,
   updateImageQc,
+  updateQcStatus,
+  type Product,
   type ProductImage,
   type QcStatus,
 } from "@/lib/lepdo";
@@ -44,6 +47,19 @@ export function useImageQcMutation(productId: string) {
   const queryClient = useQueryClient();
   const key = ["product-images", productId];
 
+  // Product QC is derived from image QC — patch the product caches instantly.
+  function syncProductQc(rows: ProductImage[] | undefined) {
+    if (!rows?.length) return null;
+    const derived = deriveProductQc(rows).status;
+    const next = derived === "MIXED" ? "HOLD" : derived; // stored column has no MIXED value
+    const patch = (r?: Product) => (r ? { ...r, qc_status: next } : r);
+    queryClient.setQueryData(["product", productId], patch);
+    queryClient.setQueryData(["products"], (all?: Product[]) =>
+      all?.map((r) => (r.id === productId ? { ...r, qc_status: next } : r)),
+    );
+    return next as QcStatus;
+  }
+
   return async function apply(
     ids: string[],
     status: QcStatus,
@@ -51,6 +67,7 @@ export function useImageQcMutation(productId: string) {
   ) {
     if (!ids.length) return;
     const prev = queryClient.getQueryData<ProductImage[]>(key);
+    const prevProduct = queryClient.getQueryData<Product>(["product", productId]);
     queryClient.setQueryData<ProductImage[]>(key, (rows) =>
       rows?.map((r) =>
         ids.includes(r.id)
@@ -64,10 +81,23 @@ export function useImageQcMutation(productId: string) {
           : r,
       ),
     );
+    syncProductQc(queryClient.getQueryData<ProductImage[]>(key));
     try {
       await updateImageQc(ids, status, extra);
+      // Persist the derived product QC so every view stays in sync.
+      const rows = queryClient.getQueryData<ProductImage[]>(key);
+      if (rows?.length) {
+        const derived = deriveProductQc(rows).status;
+        await updateQcStatus([productId], derived === "MIXED" ? "HOLD" : derived);
+      }
     } catch (e) {
       queryClient.setQueryData(key, prev);
+      if (prevProduct) {
+        queryClient.setQueryData(["product", productId], prevProduct);
+        queryClient.setQueryData(["products"], (all?: Product[]) =>
+          all?.map((r) => (r.id === productId ? prevProduct : r)),
+        );
+      }
       toast.error((e as Error).message);
     }
   };

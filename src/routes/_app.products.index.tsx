@@ -525,7 +525,7 @@ function ProductsPage() {
                     <span className="min-w-0 line-clamp-2 text-sm font-bold leading-snug tracking-wide text-primary">
                       SKU: {p.sku?.trim() || p.name}
                     </span>
-                    <QcBadge product={p} className="shrink-0" />
+                    <QcBadge product={p} images={imagesByProduct[p.id] ?? []} className="shrink-0" />
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
                     {p.team_member} · {formatDate(p.created_at)} · {count}{" "}

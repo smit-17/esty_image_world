@@ -611,6 +611,33 @@ export async function downloadProductsZip(
 /* Image-level QC                                                      */
 /* ------------------------------------------------------------------ */
 
+/** Derive a product's QC status from its image QC statuses (source of truth). */
+export type DerivedQc = {
+  status: QcStatus | "MIXED";
+  total: number;
+  breakdown: Partial<Record<QcStatus, number>>;
+};
+
+export function deriveProductQc(images: Pick<ProductImage, "qc_status">[]): DerivedQc {
+  const breakdown: Partial<Record<QcStatus, number>> = {};
+  for (const img of images) {
+    const s = ((img.qc_status ?? "PENDING").toUpperCase() || "PENDING") as QcStatus;
+    breakdown[s] = (breakdown[s] ?? 0) + 1;
+  }
+  const keys = Object.keys(breakdown) as QcStatus[];
+  return {
+    status: keys.length === 1 ? keys[0] : "MIXED",
+    total: images.length,
+    breakdown,
+  };
+}
+
+export function qcBreakdownText(breakdown: Partial<Record<QcStatus, number>>): string {
+  return QC_STATUSES.filter((s) => (breakdown[s.value] ?? 0) > 0)
+    .map((s) => `${breakdown[s.value]} ${s.label}`)
+    .join(" • ");
+}
+
 export const IMAGE_QC_REASONS = [
   "Jewelry Too Small",
   "Jewelry Too Large",

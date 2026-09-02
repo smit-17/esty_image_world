@@ -9,47 +9,42 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as PendingRouteImport } from './routes/pending'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppTeamRouteImport } from './routes/_app.team'
-import { Route as AppStorageRouteImport } from './routes/_app.storage'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppProfileRouteImport } from './routes/_app.profile'
-import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as PendingRouteImport } from './routes/pending'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
-import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
-import { Route as AppFindingIndexRouteImport } from './routes/_app.finding.index'
-import { Route as AppProductsNewRouteImport } from './routes/_app.products.new'
-import { Route as AppFindingSettingsRouteImport } from './routes/_app.finding.settings'
-import { Route as AppFindingSaveRouteImport } from './routes/_app.finding.save'
-import { Route as AppFindingAssignedRouteImport } from './routes/_app.finding.assigned'
-import { Route as AppFindingAllRouteImport } from './routes/_app.finding.all'
-import { Route as AppFindingActivityRouteImport } from './routes/_app.finding.activity'
-import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
-import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
-import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
+import { Route as AppImagesRouteImport } from './routes/_app.images'
+import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppStorageRouteImport } from './routes/_app.storage'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppAdminApprovalsRouteImport } from './routes/_app.admin.approvals'
+import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
+import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
+import { Route as AppFindingIndexRouteImport } from './routes/_app.finding.index'
+import { Route as AppFindingActivityRouteImport } from './routes/_app.finding.activity'
+import { Route as AppFindingAllRouteImport } from './routes/_app.finding.all'
+import { Route as AppFindingAssignedRouteImport } from './routes/_app.finding.assigned'
+import { Route as AppFindingSaveRouteImport } from './routes/_app.finding.save'
+import { Route as AppFindingSettingsRouteImport } from './routes/_app.finding.settings'
+import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
+import { Route as AppProductsNewRouteImport } from './routes/_app.products.new'
 import { Route as AppProductsIdIndexRouteImport } from './routes/_app.products.$id.index'
 import { Route as AppProductsIdEditRouteImport } from './routes/_app.products.$id.edit'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PendingRoute = PendingRouteImport.update({
-  id: '/pending',
-  path: '/pending',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -57,38 +52,24 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const PendingRoute = PendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppTeamRoute = AppTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AppRoute,
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppStorageRoute = AppStorageRouteImport.update({
-  id: '/storage',
-  path: '/storage',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProfileRoute = AppProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEstimatesRoute = AppEstimatesRouteImport.update({
-  id: '/estimates',
-  path: '/estimates',
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -96,59 +77,39 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const AppCategoriesRoute = AppCategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
+const AppEstimatesRoute = AppEstimatesRouteImport.update({
+  id: '/estimates',
+  path: '/estimates',
   getParentRoute: () => AppRoute,
 } as any)
-const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
-  id: '/products/',
-  path: '/products/',
+const AppImagesRoute = AppImagesRouteImport.update({
+  id: '/images',
+  path: '/images',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFindingIndexRoute = AppFindingIndexRouteImport.update({
-  id: '/finding/',
-  path: '/finding/',
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
-const AppProductsNewRoute = AppProductsNewRouteImport.update({
-  id: '/products/new',
-  path: '/products/new',
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFindingSettingsRoute = AppFindingSettingsRouteImport.update({
-  id: '/finding/settings',
-  path: '/finding/settings',
+const AppStorageRoute = AppStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFindingSaveRoute = AppFindingSaveRouteImport.update({
-  id: '/finding/save',
-  path: '/finding/save',
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFindingAssignedRoute = AppFindingAssignedRouteImport.update({
-  id: '/finding/assigned',
-  path: '/finding/assigned',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingAllRoute = AppFindingAllRouteImport.update({
-  id: '/finding/all',
-  path: '/finding/all',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingActivityRoute = AppFindingActivityRouteImport.update({
-  id: '/finding/activity',
-  path: '/finding/activity',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
-  id: '/admin/roles',
-  path: '/admin/roles',
+const AppAdminApprovalsRoute = AppAdminApprovalsRouteImport.update({
+  id: '/admin/approvals',
+  path: '/admin/approvals',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
@@ -156,9 +117,54 @@ const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminApprovalsRoute = AppAdminApprovalsRouteImport.update({
-  id: '/admin/approvals',
-  path: '/admin/approvals',
+const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingIndexRoute = AppFindingIndexRouteImport.update({
+  id: '/finding/',
+  path: '/finding/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingActivityRoute = AppFindingActivityRouteImport.update({
+  id: '/finding/activity',
+  path: '/finding/activity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingAllRoute = AppFindingAllRouteImport.update({
+  id: '/finding/all',
+  path: '/finding/all',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingAssignedRoute = AppFindingAssignedRouteImport.update({
+  id: '/finding/assigned',
+  path: '/finding/assigned',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingSaveRoute = AppFindingSaveRouteImport.update({
+  id: '/finding/save',
+  path: '/finding/save',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingSettingsRoute = AppFindingSettingsRouteImport.update({
+  id: '/finding/settings',
+  path: '/finding/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProductsNewRoute = AppProductsNewRouteImport.update({
+  id: '/products/new',
+  path: '/products/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsIdIndexRoute = AppProductsIdIndexRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
   '/estimates': typeof AppEstimatesRoute
+  '/images': typeof AppImagesRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/storage': typeof AppStorageRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
   '/estimates': typeof AppEstimatesRoute
+  '/images': typeof AppImagesRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/storage': typeof AppStorageRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/estimates': typeof AppEstimatesRoute
+  '/_app/images': typeof AppImagesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/storage': typeof AppStorageRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/dashboard'
     | '/estimates'
+    | '/images'
     | '/profile'
     | '/settings'
     | '/storage'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/dashboard'
     | '/estimates'
+    | '/images'
     | '/profile'
     | '/settings'
     | '/storage'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/_app/categories'
     | '/_app/dashboard'
     | '/_app/estimates'
+    | '/_app/images'
     | '/_app/profile'
     | '/_app/settings'
     | '/_app/storage'
@@ -357,32 +369,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pending': {
-      id: '/pending'
-      path: '/pending'
-      fullPath: '/pending'
-      preLoaderRoute: typeof PendingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -392,46 +383,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/team': {
-      id: '/_app/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof AppTeamRouteImport
-      parentRoute: typeof AppRoute
+    '/pending': {
+      id: '/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof PendingRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/storage': {
-      id: '/_app/storage'
-      path: '/storage'
-      fullPath: '/storage'
-      preLoaderRoute: typeof AppStorageRouteImport
-      parentRoute: typeof AppRoute
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/profile': {
-      id: '/_app/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AppProfileRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/estimates': {
-      id: '/_app/estimates'
-      path: '/estimates'
-      fullPath: '/estimates'
-      preLoaderRoute: typeof AppEstimatesRouteImport
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -441,81 +425,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/categories': {
-      id: '/_app/categories'
-      path: '/categories'
-      fullPath: '/categories'
-      preLoaderRoute: typeof AppCategoriesRouteImport
+    '/_app/estimates': {
+      id: '/_app/estimates'
+      path: '/estimates'
+      fullPath: '/estimates'
+      preLoaderRoute: typeof AppEstimatesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/products/': {
-      id: '/_app/products/'
-      path: '/products'
-      fullPath: '/products/'
-      preLoaderRoute: typeof AppProductsIndexRouteImport
+    '/_app/images': {
+      id: '/_app/images'
+      path: '/images'
+      fullPath: '/images'
+      preLoaderRoute: typeof AppImagesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/finding/': {
-      id: '/_app/finding/'
-      path: '/finding'
-      fullPath: '/finding/'
-      preLoaderRoute: typeof AppFindingIndexRouteImport
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/products/new': {
-      id: '/_app/products/new'
-      path: '/products/new'
-      fullPath: '/products/new'
-      preLoaderRoute: typeof AppProductsNewRouteImport
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/finding/settings': {
-      id: '/_app/finding/settings'
-      path: '/finding/settings'
-      fullPath: '/finding/settings'
-      preLoaderRoute: typeof AppFindingSettingsRouteImport
+    '/_app/storage': {
+      id: '/_app/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof AppStorageRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/finding/save': {
-      id: '/_app/finding/save'
-      path: '/finding/save'
-      fullPath: '/finding/save'
-      preLoaderRoute: typeof AppFindingSaveRouteImport
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/finding/assigned': {
-      id: '/_app/finding/assigned'
-      path: '/finding/assigned'
-      fullPath: '/finding/assigned'
-      preLoaderRoute: typeof AppFindingAssignedRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/all': {
-      id: '/_app/finding/all'
-      path: '/finding/all'
-      fullPath: '/finding/all'
-      preLoaderRoute: typeof AppFindingAllRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/activity': {
-      id: '/_app/finding/activity'
-      path: '/finding/activity'
-      fullPath: '/finding/activity'
-      preLoaderRoute: typeof AppFindingActivityRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/users': {
-      id: '/_app/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AppAdminUsersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/roles': {
-      id: '/_app/admin/roles'
-      path: '/admin/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AppAdminRolesRouteImport
+    '/_app/admin/approvals': {
+      id: '/_app/admin/approvals'
+      path: '/admin/approvals'
+      fullPath: '/admin/approvals'
+      preLoaderRoute: typeof AppAdminApprovalsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin/audit': {
@@ -525,11 +481,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminAuditRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin/approvals': {
-      id: '/_app/admin/approvals'
-      path: '/admin/approvals'
-      fullPath: '/admin/approvals'
-      preLoaderRoute: typeof AppAdminApprovalsRouteImport
+    '/_app/admin/roles': {
+      id: '/_app/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AppAdminRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/': {
+      id: '/_app/finding/'
+      path: '/finding'
+      fullPath: '/finding/'
+      preLoaderRoute: typeof AppFindingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/activity': {
+      id: '/_app/finding/activity'
+      path: '/finding/activity'
+      fullPath: '/finding/activity'
+      preLoaderRoute: typeof AppFindingActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/all': {
+      id: '/_app/finding/all'
+      path: '/finding/all'
+      fullPath: '/finding/all'
+      preLoaderRoute: typeof AppFindingAllRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/assigned': {
+      id: '/_app/finding/assigned'
+      path: '/finding/assigned'
+      fullPath: '/finding/assigned'
+      preLoaderRoute: typeof AppFindingAssignedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/save': {
+      id: '/_app/finding/save'
+      path: '/finding/save'
+      fullPath: '/finding/save'
+      preLoaderRoute: typeof AppFindingSaveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding/settings': {
+      id: '/_app/finding/settings'
+      path: '/finding/settings'
+      fullPath: '/finding/settings'
+      preLoaderRoute: typeof AppFindingSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/products/': {
+      id: '/_app/products/'
+      path: '/products'
+      fullPath: '/products/'
+      preLoaderRoute: typeof AppProductsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/products/new': {
+      id: '/_app/products/new'
+      path: '/products/new'
+      fullPath: '/products/new'
+      preLoaderRoute: typeof AppProductsNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/products/$id/': {
@@ -553,6 +572,7 @@ interface AppRouteChildren {
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppEstimatesRoute: typeof AppEstimatesRoute
+  AppImagesRoute: typeof AppImagesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStorageRoute: typeof AppStorageRoute
@@ -577,6 +597,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCategoriesRoute: AppCategoriesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppEstimatesRoute: AppEstimatesRoute,
+  AppImagesRoute: AppImagesRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStorageRoute: AppStorageRoute,

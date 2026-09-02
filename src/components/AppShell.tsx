@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Gem,
+  Images,
   PlusCircle,
   Tags,
   Users,
@@ -29,6 +30,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/products", label: "Products", icon: Gem },
   { to: "/products/new", label: "Add Product", icon: PlusCircle },
+  { to: "/images", label: "All Images", icon: Images },
   { to: "/estimates", label: "Metal & Diamond", icon: Scale },
   { to: "/categories", label: "Categories", icon: Tags },
   { to: "/team", label: "Team Members", icon: Users },

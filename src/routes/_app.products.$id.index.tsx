@@ -173,7 +173,7 @@ function ProductDetailPage() {
             <span className="rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold tabular-nums tracking-wide text-primary">
               SKU: {product.sku?.trim() || "—"}
             </span>
-            <QcBadge product={product} />
+            <QcBadge product={product} images={images} />
           </div>
           <h1 className="mt-2 text-3xl text-primary lg:text-4xl">{product.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">

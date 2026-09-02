@@ -122,6 +122,7 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string | null }[] = [
   { prefix: "/dashboard", permission: "PRODUCT_VIEW" },
   { prefix: "/products/new", permission: "PRODUCT_ADD" },
   { prefix: "/products", permission: "PRODUCT_VIEW" },
+  { prefix: "/images", permission: "PRODUCT_VIEW" },
   { prefix: "/estimates", permission: "ESTIMATE_VIEW" },
   { prefix: "/finding", permission: "FINDING_VIEW" },
   { prefix: "/categories", permission: "SETTINGS_VIEW" },

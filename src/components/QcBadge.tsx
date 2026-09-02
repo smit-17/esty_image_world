@@ -9,8 +9,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
-import { QC_STATUSES, qcLabel, updateQcStatus, type Product, type QcStatus } from "@/lib/lepdo";
+import {
+  QC_STATUSES,
+  deriveProductQc,
+  qcBreakdownText,
+  qcLabel,
+  updateQcStatus,
+  type Product,
+  type ProductImage,
+  type QcStatus,
+} from "@/lib/lepdo";
 import { cn } from "@/lib/utils";
 
 const TONE: Record<string, string> = {
@@ -18,16 +28,33 @@ const TONE: Record<string, string> = {
   PASS: "bg-primary/10 text-primary",
   HOLD: "bg-gold/20 text-gold-foreground",
   REJECT: "bg-destructive/10 text-destructive",
+  MIXED: "bg-amber-500/15 text-amber-700",
 };
 
-export function QcBadge({ product, className }: { product: Product; className?: string }) {
+/**
+ * Product QC badge. When `images` are provided, QC is derived automatically
+ * from image-level QC (source of truth) and the badge becomes read-only —
+ * click shows the breakdown for MIXED.
+ */
+export function QcBadge({
+  product,
+  images,
+  className,
+}: {
+  product: Product;
+  images?: ProductImage[];
+  className?: string;
+}) {
   const { can, audit } = useAuth();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const status = (product.qc_status ?? "PENDING") as QcStatus;
   const editable = can("PRODUCT_UPDATE");
 
-  const label = (
+  // Auto mode: derive from image QC whenever the product has images.
+  const derived = images && images.length > 0 ? deriveProductQc(images) : null;
+  const status = derived ? derived.status : ((product.qc_status ?? "PENDING") as QcStatus);
+
+  const pill = (extra?: React.ReactNode) => (
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-wide",
@@ -35,13 +62,36 @@ export function QcBadge({ product, className }: { product: Product; className?: 
         className,
       )}
     >
-      QC: {qcLabel(status)}
+      QC: {status === "MIXED" ? "Mixed" : qcLabel(status)}
       {status === "PASS" && <Check className="size-3" />}
-      {editable && <ChevronDown className="size-3 opacity-70" />}
+      {extra}
     </span>
   );
 
-  if (!editable) return label;
+  // Auto-derived from image QC: read-only, with a breakdown popover.
+  if (derived) {
+    if (status !== "MIXED") return pill();
+    return (
+      <Popover>
+        <PopoverTrigger onClick={(e) => e.stopPropagation()} className="focus:outline-none">
+          {pill(<ChevronDown className="size-3 opacity-70" />)}
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Image QC breakdown
+          </p>
+          <p className="mt-1.5 text-sm font-medium text-foreground">
+            {qcBreakdownText(derived.breakdown)}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {derived.total} images · set all images to one status to clear Mixed
+          </p>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  if (!editable) return pill();
 
   async function set(next: QcStatus) {
     if (next === status || busy) return;
@@ -64,7 +114,7 @@ export function QcBadge({ product, className }: { product: Product; className?: 
         oldValues: { qc_status: status },
         newValues: { qc_status: next },
       });
-      toast.success("Saved \u2713", { duration: 1200 });
+      toast.success("Saved ✓", { duration: 1200 });
     } catch (e) {
       // Roll back to the previous value.
       const revert = (rows?: Product[]) =>
@@ -86,7 +136,7 @@ export function QcBadge({ product, className }: { product: Product; className?: 
         onClick={(e) => e.stopPropagation()}
         className="focus:outline-none"
       >
-        {label}
+        {pill(<ChevronDown className="size-3 opacity-70" />)}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-40">
         {QC_STATUSES.map((s) => (
