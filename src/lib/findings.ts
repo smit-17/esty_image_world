@@ -1,16 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
+import { currentActor } from "@/lib/auth";
 import { BUCKET } from "@/lib/lepdo";
 
 export const FINDING_PLATFORMS = ["Etsy", "Pinterest", "Google", "Brand Website", "Other"];
 export const FINDING_CATEGORIES = ["Ring", "Earring", "Necklace", "Bracelet"];
 export const FINDING_STYLES = ["Classic", "Regular", "Unique Cut Diamond", "Gemstone Jewelry"];
 export const FINDING_GENDERS = ["Male", "Female", "Unisex"];
-export const FINDING_PRIORITIES = ["High", "Medium", "Low"];
-export const FINDING_STATUSES = ["Pending", "Done", "Rework", "Rejected", "On Hold"];
+export const FINDING_PRIORITIES = ["low", "medium", "high"];
+export const FINDING_STATUSES = ["unassigned", "assigned", "in_progress", "moved"];
+
+export type FindingExtra = { section: string; label: string; value: string };
 
 export type Finding = {
   id: string;
   code: string;
+  title: string | null;
+  source_sku: string | null;
   product_url: string | null;
   platform: string;
   brand: string | null;
@@ -22,11 +27,36 @@ export type Finding = {
   finding_by: string | null;
   image_path: string | null;
   thumb_path: string | null;
+  main_image: string | null;
+  image_seeds: string[] | null;
+  extra: FindingExtra[] | null;
   assigned_to: string | null;
   status: string;
   created_at: string;
   updated_at: string;
 };
+
+/** Old rows used "High" / "Pending" — normalise to the keys the UI works with. */
+export function normalizePriority(value?: string | null) {
+  const v = (value ?? "").toLowerCase();
+  return FINDING_PRIORITIES.includes(v) ? v : "medium";
+}
+
+export function normalizeStatus(finding: { status?: string | null; assigned_to?: string | null }) {
+  const v = (finding.status ?? "").toLowerCase().replace(/\s+/g, "_");
+  if (FINDING_STATUSES.includes(v)) return v;
+  if (v === "done") return "moved";
+  return finding.assigned_to ? "assigned" : "unassigned";
+}
+
+export function findingImages(f: Finding): string[] {
+  const seeds = Array.isArray(f.image_seeds) ? f.image_seeds : [];
+  return Array.from(new Set([f.main_image, f.image_path, ...seeds].filter(Boolean) as string[]));
+}
+
+export function mainImageOf(f: Finding): string | null {
+  return findingImages(f)[0] ?? null;
+}
 
 export type FindingMember = { id: string; name: string; email: string | null; created_at: string };
 export type FindingOption = { id: string; kind: string; value: string; created_at: string };
@@ -113,7 +143,7 @@ export async function logActivity(
   activity: string,
   finding?: { id?: string | null; code?: string | null },
 ) {
-  const user = getFindingUser();
+  const user = getFindingUser() ?? { name: currentActor().name ?? "Unknown" };
   await supabase.from("finding_activity" as never).insert({
     finding_id: finding?.id ?? null,
     finding_code: finding?.code ?? null,

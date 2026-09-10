@@ -140,6 +140,7 @@ export function AppShell() {
             <Link
               key={item.to}
               to={item.to}
+              search={{} as never}
               className={linkClass(pathname === item.to || pathname.startsWith(`${item.to}/`))}
             >
               <item.icon className="size-[18px]" strokeWidth={1.75} />

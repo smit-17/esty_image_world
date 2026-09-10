@@ -1,7 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Pencil, Trash2, ImageOff, Download, Loader2, X } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  ImageOff,
+  Download,
+  Loader2,
+  X,
+  MoreVertical,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,8 +31,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { EtsyQuickStatus } from "@/components/EtsyPanel";
 import { ProductFilterBar } from "@/components/ProductFilterBar";
 import { ProductGallery } from "@/components/ProductGallery";
@@ -44,6 +59,8 @@ import {
   bulkAssign,
   bulkDeleteProducts,
   bulkListingStatus,
+  bulkProductQc,
+  qcImpact,
   deleteProduct,
   downloadProductImages,
   downloadProductsZip,
@@ -57,7 +74,6 @@ import {
   QC_STATUSES,
   qcLabel,
   signPaths,
-  updateQcStatus,
   type EtsyStatus,
   type Product,
   type ProductEstimate,
@@ -106,6 +122,8 @@ function ProductsPage() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
+  const [qcAsk, setQcAsk] = useState<{ ids: string[]; status: QcStatus } | null>(null);
+  const [qcReason, setQcReason] = useState("");
 
   const { data: products = [], isLoading } = useQuery({ queryKey: ["products"], queryFn: fetchProducts });
   const { data: images = [] } = useQuery({ queryKey: ["images", "all"], queryFn: () => fetchImages() });
@@ -227,23 +245,114 @@ function ProductsPage() {
   }, [categories, products]);
 
   /* --------------------------- selection --------------------------- */
+  // Selection is always reconciled against the current filter result so hidden
+  // products can never be changed by a bulk action.
   const selectedIds = useMemo(
     () => filtered.filter((p) => selected[p.id]).map((p) => p.id),
     [filtered, selected],
   );
-  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const pageSelected =
+    visible.length > 0 && visible.every((p) => selected[p.id]);
+  const allFilteredSelected = filtered.length > 0 && selectedIds.length === filtered.length;
 
   function toggle(id: string, value: boolean) {
     setSelected((prev) => ({ ...prev, [id]: value }));
   }
-  function toggleAll(value: boolean) {
-    const next: Record<string, boolean> = { ...selected };
-    for (const p of filtered) next[p.id] = value;
-    setSelected(next);
+  function selectPage(value: boolean) {
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const p of visible) next[p.id] = value;
+      return next;
+    });
+  }
+  function selectAllFiltered(value: boolean) {
+    setSelected(() => {
+      const next: Record<string, boolean> = {};
+      if (value) for (const p of filtered) next[p.id] = true;
+      return next;
+    });
   }
   function clearSelection() {
     setSelected({});
   }
+
+  // Changing any filter clears the selection — never act on products you can no
+  // longer see.
+  const filterKey = JSON.stringify(filters);
+  const lastFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (lastFilterKey.current === filterKey) return;
+    lastFilterKey.current = filterKey;
+    setSelected({});
+  }, [filterKey]);
+
+  async function assignSelected(ids: string[], member: string) {
+    setBulkBusy("assign");
+    try {
+      const res = await bulkAssign(ids, member);
+      audit({
+        action: "PRODUCT_BULK_ACTION",
+        module: "Products",
+        entityType: "product",
+        description: `${member ? `Assigned to ${member}` : "Unassigned"} (${res.updated.length} products)`,
+        newValues: { ids: res.updated, member },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      if (res.failed.length) {
+        toast.error(`${res.updated.length} updated · ${res.failed.length} failed`);
+        setSelected(Object.fromEntries(res.failed.map((id) => [id, true])));
+      } else {
+        toast.success(
+          member
+            ? `Assigned ${res.updated.length} to ${member}`
+            : `Unassigned ${res.updated.length} products`,
+        );
+        clearSelection();
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function applyQc(ids: string[], status: QcStatus, reason: string) {
+    setBulkBusy("qc");
+    try {
+      const extra =
+        status === "HOLD" || status === "REJECT"
+          ? { reasons: ["Other"], note: reason.trim() }
+          : undefined;
+      const res = await bulkProductQc(ids, status, imagesByProduct, extra);
+      audit({
+        action: "QC_STATUS_CHANGE",
+        module: "Products",
+        entityType: "product",
+        description: `QC set to ${qcLabel(status)} for ${res.updated.length} products / ${res.images} images`,
+        newValues: { ids: res.updated, status, reason: extra?.note ?? null },
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["products"] }),
+        queryClient.invalidateQueries({ queryKey: ["images", "all"] }),
+      ]);
+      if (res.failed.length) {
+        toast.error(
+          `${res.updated.length} updated · ${res.failed.length} skipped${res.message ? ` — ${res.message}` : ""}`,
+        );
+        setSelected(Object.fromEntries(res.failed.map((id) => [id, true])));
+      } else {
+        toast.success(`QC ${qcLabel(status)} · ${res.updated.length} products · ${res.images} images`);
+        clearSelection();
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBulkBusy(null);
+      setQcAsk(null);
+      setQcReason("");
+    }
+  }
+
 
   async function runBulk(kind: string, fn: () => Promise<void>, message: string, log: string) {
     setBulkBusy(kind);
@@ -325,149 +434,151 @@ function ProductsPage() {
         totalCount={products.length}
       />
 
-      {/* Bulk action bar */}
+      {/* Selection + bulk action bar */}
       {isAdmin && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(!!v)} />
-            Select all ({filtered.length})
-          </label>
+        <div className="sticky top-2 z-30 space-y-2 rounded-xl border border-border bg-card/95 px-3 py-2 backdrop-blur">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="flex cursor-pointer items-center gap-2">
+              <Checkbox checked={pageSelected} onCheckedChange={(v) => selectPage(!!v)} />
+              Select page ({visible.length})
+            </label>
+            <Button
+              size="sm"
+              variant={allFilteredSelected ? "secondary" : "outline"}
+              className="h-8 rounded-lg"
+              onClick={() => selectAllFiltered(!allFilteredSelected)}
+            >
+              {allFilteredSelected
+                ? "Unselect all filtered"
+                : `Select all filtered (${filtered.length})`}
+            </Button>
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
+              {selectedIds.length} selected
+            </span>
+            {selectedIds.length > 0 && (
+              <Button size="sm" variant="ghost" className="h-8 rounded-lg" onClick={clearSelection}>
+                <X className="size-3.5" /> Clear selection
+              </Button>
+            )}
+          </div>
 
           {selectedIds.length > 0 && (
-            <>
-              <span className="ml-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
-                {selectedIds.length} selected
-              </span>
-
-              <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="rounded-lg">
-                      Listing status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Set listing status</DropdownMenuLabel>
-                    {ETSY_STATUSES.map((s) => (
-                      <DropdownMenuItem
-                        key={s.value}
-                        onSelect={() =>
-                          void runBulk(
-                            "listing",
-                            () => bulkListingStatus(selectedIds, s.value as EtsyStatus),
-                            `Listing status set to ${s.label}`,
-                            `Listing status set to ${s.label}`,
-                          )
-                        }
-                      >
-                        {s.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="rounded-lg">
-                      QC status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Set QC status</DropdownMenuLabel>
-                    {QC_STATUSES.map((s) => (
-                      <DropdownMenuItem
-                        key={s.value}
-                        onSelect={() =>
-                          void runBulk(
-                            "qc",
-                            () => updateQcStatus(selectedIds, s.value as QcStatus),
-                            `QC set to ${s.label}`,
-                            `QC status set to ${qcLabel(s.value)}`,
-                          )
-                        }
-                      >
-                        {s.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="rounded-lg">
-                      Assign
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
-                    <DropdownMenuLabel>Assign to</DropdownMenuLabel>
-                    {team.length === 0 && (
-                      <DropdownMenuItem disabled>No team members</DropdownMenuItem>
-                    )}
-                    {team.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        onSelect={() =>
-                          void runBulk(
-                            "assign",
-                            () => bulkAssign(selectedIds, m.name),
-                            `Assigned to ${m.name}`,
-                            `Assigned to ${m.name}`,
-                          )
-                        }
-                      >
-                        {m.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {can("IMAGE_DOWNLOAD") && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg"
-                    disabled={bulkBusy === "download"}
-                    onClick={() =>
-                      void runBulk(
-                        "download",
-                        () =>
-                          downloadProductsZip(
-                            filtered.filter((p) => selected[p.id]),
-                            imagesByProduct,
-                          ),
-                        "Download ready",
-                        "Bulk image download",
-                      )
-                    }
-                  >
-                    {bulkBusy === "download" ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Download className="size-3.5" />
-                    )}
-                    Download
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg" disabled={!!bulkBusy}>
+                    <UserRound className="size-3.5" /> Assign member
                   </Button>
-                )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                  <DropdownMenuLabel>Assign {selectedIds.length} products to</DropdownMenuLabel>
+                  {team.length === 0 && <DropdownMenuItem disabled>No team members</DropdownMenuItem>}
+                  {team.map((m) => (
+                    <DropdownMenuItem
+                      key={m.id}
+                      onSelect={() => void assignSelected(selectedIds, m.name)}
+                    >
+                      {m.name}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => void assignSelected(selectedIds, "")}>
+                    Unassign
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                {can("PRODUCT_DELETE") && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg text-destructive hover:text-destructive"
-                    onClick={() => setBulkDelete(true)}
-                  >
-                    <Trash2 className="size-3.5" /> Delete
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg" disabled={!!bulkBusy}>
+                    Set QC
                   </Button>
-                )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Set QC status</DropdownMenuLabel>
+                  {QC_STATUSES.map((s) => (
+                    <DropdownMenuItem
+                      key={s.value}
+                      onSelect={() => {
+                        setQcReason("");
+                        setQcAsk({ ids: selectedIds, status: s.value as QcStatus });
+                      }}
+                    >
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                <Button size="sm" variant="ghost" className="rounded-lg" onClick={clearSelection}>
-                  <X className="size-3.5" /> Clear
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg" disabled={!!bulkBusy}>
+                    Listing status
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Set listing status</DropdownMenuLabel>
+                  {ETSY_STATUSES.map((s) => (
+                    <DropdownMenuItem
+                      key={s.value}
+                      onSelect={() =>
+                        void runBulk(
+                          "listing",
+                          () => bulkListingStatus(selectedIds, s.value as EtsyStatus),
+                          `Listing status set to ${s.label}`,
+                          `Listing status set to ${s.label}`,
+                        )
+                      }
+                    >
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {can("IMAGE_DOWNLOAD") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg"
+                  disabled={bulkBusy === "download"}
+                  onClick={() =>
+                    void runBulk(
+                      "download",
+                      () =>
+                        downloadProductsZip(
+                          filtered.filter((p) => selected[p.id]),
+                          imagesByProduct,
+                        ),
+                      "Download ready",
+                      "Bulk image download",
+                    )
+                  }
+                >
+                  {bulkBusy === "download" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Download className="size-3.5" />
+                  )}
+                  Download
                 </Button>
-              </div>
-            </>
+              )}
+
+              {can("PRODUCT_DELETE") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg text-destructive hover:text-destructive"
+                  onClick={() => setBulkDelete(true)}
+                >
+                  <Trash2 className="size-3.5" /> Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}
+
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -500,17 +611,41 @@ function ProductsPage() {
                 )}
               >
                 <div className="relative">
-                  <ProductGallery
-                    paths={paths}
-                    alt={p.name}
-                    initialUrl={paths[0] ? signed[paths[0]] : undefined}
-                    onOpen={() => navigate({ to: "/products/$id", params: { id: p.id } })}
-                  />
+                  {paths.length === 0 ? (
+                    <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-muted/60 text-center">
+                      <ImageOff className="size-7 text-gold" strokeWidth={1.5} />
+                      <p className="text-xs font-medium text-muted-foreground">No AI Images Yet</p>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-lg text-xs"
+                      >
+                        <Link to="/products/$id/edit" params={{ id: p.id }}>
+                          + Add Images
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <ProductGallery
+                      paths={paths}
+                      alt={p.name}
+                      initialUrl={paths[0] ? signed[paths[0]] : undefined}
+                      onOpen={() => navigate({ to: "/products/$id", params: { id: p.id } })}
+                    />
+                  )}
                   {isAdmin && (
-                    <label className="absolute left-2 top-2 flex size-7 items-center justify-center rounded-md bg-background/90 shadow-soft">
+                    <label
+                      className="absolute left-2 top-2 z-20 flex size-9 cursor-pointer items-center justify-center rounded-full bg-background/95 shadow-soft ring-1 ring-border"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggle(p.id, !selected[p.id]);
+                      }}
+                    >
                       <Checkbox
+                        className="pointer-events-none rounded-full"
                         checked={!!selected[p.id]}
-                        onCheckedChange={(v) => toggle(p.id, !!v)}
                         aria-label={`Select ${p.name}`}
                       />
                     </label>
@@ -539,26 +674,11 @@ function ProductsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-auto flex gap-1.5 pt-2">
-
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
                     <Button asChild size="sm" variant="secondary" className="flex-1 rounded-lg">
                       <Link to="/products/$id" params={{ id: p.id }}>
                         <Eye className="size-3.5" /> View
                       </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-lg"
-                      disabled={zipId === p.id || count === 0}
-                      onClick={() => downloadProduct(p)}
-                      aria-label="Download all images"
-                    >
-                      {zipId === p.id ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Download className="size-3.5" />
-                      )}
                     </Button>
                     <Button
                       size="sm"
@@ -569,16 +689,85 @@ function ProductsPage() {
                     >
                       <Pencil className="size-3.5" />
                     </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-lg text-destructive hover:text-destructive"
-                      onClick={() => setPendingDelete(p.id)}
-                      aria-label="Delete product"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg"
+                          aria-label="More actions"
+                        >
+                          {zipId === p.id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <MoreVertical className="size-3.5" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {isAdmin && (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <UserRound className="mr-2 size-3.5" /> Assign member
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="max-h-72 overflow-y-auto">
+                              {team.length === 0 && (
+                                <DropdownMenuItem disabled>No team members</DropdownMenuItem>
+                              )}
+                              {team.map((m) => (
+                                <DropdownMenuItem
+                                  key={m.id}
+                                  onSelect={() => void assignSelected([p.id], m.name)}
+                                >
+                                  {m.name}
+                                </DropdownMenuItem>
+                              ))}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => void assignSelected([p.id], "")}>
+                                Unassign
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        )}
+                        {isAdmin && (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Set QC</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              {QC_STATUSES.map((s) => (
+                                <DropdownMenuItem
+                                  key={s.value}
+                                  onSelect={() => {
+                                    setQcReason("");
+                                    setQcAsk({ ids: [p.id], status: s.value as QcStatus });
+                                  }}
+                                >
+                                  {s.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        )}
+                        {can("IMAGE_DOWNLOAD") && (
+                          <DropdownMenuItem
+                            disabled={zipId === p.id || count === 0}
+                            onSelect={() => void downloadProduct(p)}
+                          >
+                            <Download className="mr-2 size-3.5" /> Download images
+                          </DropdownMenuItem>
+                        )}
+                        {can("PRODUCT_DELETE") && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setPendingDelete(p.id)}
+                            >
+                              <Trash2 className="mr-2 size-3.5" /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </article>
@@ -592,6 +781,64 @@ function ProductsPage() {
           Loading more products…
         </div>
       )}
+
+      {/* QC confirmation — shows exactly what will change before it happens. */}
+      <AlertDialog open={!!qcAsk} onOpenChange={(o) => !o && setQcAsk(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          {qcAsk && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Set QC to {qcLabel(qcAsk.status)}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {(() => {
+                    const impact = qcImpact(qcAsk.ids, imagesByProduct, qcAsk.status);
+                    return (
+                      <>
+                        This updates {impact.products}{" "}
+                        {impact.products === 1 ? "product" : "products"} and {impact.images}{" "}
+                        original {impact.images === 1 ? "image" : "images"}. Reference images are
+                        never included.
+                        {impact.skipped > 0 && (
+                          <>
+                            {" "}
+                            {impact.skipped} cannot pass — they have no original images yet.
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {(qcAsk.status === "HOLD" || qcAsk.status === "REJECT") && (
+                <Input
+                  autoFocus
+                  value={qcReason}
+                  onChange={(e) => setQcReason(e.target.value)}
+                  placeholder="Reason (required)"
+                  className="rounded-lg"
+                />
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="rounded-full"
+                  disabled={
+                    ((qcAsk.status === "HOLD" || qcAsk.status === "REJECT") &&
+                      !qcReason.trim()) ||
+                    qcImpact(qcAsk.ids, imagesByProduct, qcAsk.status).products === 0
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    void applyQc(qcAsk.ids, qcAsk.status, qcReason);
+                  }}
+                >
+                  Apply
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent className="rounded-2xl">

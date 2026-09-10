@@ -40,7 +40,27 @@ export type Product = {
   etsy_status?: EtsyStatus | string;
   etsy_url?: string | null;
   etsy_listed_by?: string | null;
+  // Filled in when the product was created from a Finding.
+  finding_id?: string | null;
+  finding_code?: string | null;
+  source_url?: string | null;
+  source_platform?: string | null;
+  source_brand?: string | null;
+  source_seller?: string | null;
+  source_listing_id?: string | null;
+  source_sku?: string | null;
+  source_price?: string | null;
+  source_currency?: string | null;
+  source_description?: string | null;
+  source_tags?: string[] | null;
+  source_details?: { section: string; label: string; value: string }[] | null;
+  source_found_by?: string | null;
+  source_assigned_to?: string | null;
+  source_priority?: string | null;
 };
+
+/** "OUR" = created by our team (the real product images). "REFERENCE" = fetched from a finding source. */
+export type ImageKind = "OUR" | "REFERENCE";
 
 export type ProductImage = {
   id: string;
@@ -51,6 +71,8 @@ export type ProductImage = {
   size_bytes: number;
   position: number;
   created_at: string;
+  kind?: ImageKind | string | null;
+  source_url?: string | null;
   qc_status?: string | null;
   qc_reasons?: string[] | null;
   qc_note?: string | null;
@@ -93,7 +115,14 @@ export async function fetchProduct(id: string): Promise<Product> {
   return data as unknown as Product;
 }
 
-export async function fetchImages(productId?: string): Promise<ProductImage[]> {
+/**
+ * Our own images by default — reference images fetched from a finding source are
+ * a separate group and never count as product images, cover or QC subjects.
+ */
+export async function fetchImages(
+  productId?: string,
+  kind: ImageKind | "ALL" = "OUR",
+): Promise<ProductImage[]> {
   return fetchAllRows<ProductImage>(() => {
     let q = supabase
       .from("product_images" as never)
@@ -101,8 +130,14 @@ export async function fetchImages(productId?: string): Promise<ProductImage[]> {
       .order("position", { ascending: true })
       .order("id", { ascending: true });
     if (productId) q = q.eq("product_id", productId);
+    if (kind !== "ALL") q = q.eq("kind", kind);
     return q as never;
   });
+}
+
+/** Inspiration images copied from the original Etsy/Pinterest/brand listing. */
+export async function fetchReferenceImages(productId: string): Promise<ProductImage[]> {
+  return fetchImages(productId, "REFERENCE");
 }
 
 
@@ -307,7 +342,7 @@ export async function deleteImageRecords(images: ProductImage[]) {
 
 export async function deleteProduct(id: string) {
   assertPerm("PRODUCT_DELETE", "deleting products");
-  const images = await fetchImages(id);
+  const images = await fetchImages(id, "ALL");
   if (images.length) {
     await supabase.storage
       .from(BUCKET)
@@ -558,15 +593,78 @@ export async function bulkListingStatus(ids: string[], status: EtsyStatus) {
   if (error) throw error;
 }
 
-/** Bulk re-assign the owning team member. */
-export async function bulkAssign(ids: string[], member: string) {
+/** Bulk re-assign the owning team member. Pass "" to unassign. */
+export async function bulkAssign(ids: string[], member: string): Promise<BulkResult> {
   assertPerm("PRODUCT_UPDATE", "assigning products");
-  if (!ids.length) return;
+  if (!ids.length) return { updated: [], failed: [], images: 0 };
   const { error } = await supabase
     .from("products" as never)
-    .update({ team_member: member } as never)
+    .update({ team_member: member.trim() || "Unassigned" } as never)
     .in("id", ids);
-  if (error) throw error;
+  if (error) return { updated: [], failed: ids, images: 0, message: error.message };
+  return { updated: ids, failed: [], images: 0 };
+}
+
+export type BulkResult = {
+  updated: string[];
+  /** Selections that were not changed and stay selected for a retry. */
+  failed: string[];
+  /** Number of original (OUR) images touched. */
+  images: number;
+  message?: string;
+};
+
+/**
+ * Product-level QC that stays consistent with image QC.
+ * Only original ("OUR") images are ever touched — reference images are excluded.
+ * Pass is refused for products that have no original images.
+ */
+export async function bulkProductQc(
+  ids: string[],
+  status: QcStatus,
+  imagesByProduct: Record<string, ProductImage[]>,
+  extra?: { reasons?: string[]; note?: string | null },
+): Promise<BulkResult> {
+  assertPerm("PRODUCT_UPDATE", "changing QC status");
+  if (!ids.length) return { updated: [], failed: [], images: 0 };
+
+  const eligible =
+    status === "PASS" ? ids.filter((id) => (imagesByProduct[id] ?? []).length > 0) : ids;
+  const failed = ids.filter((id) => !eligible.includes(id));
+  if (!eligible.length) {
+    return {
+      updated: [],
+      failed,
+      images: 0,
+      message: "Pass needs at least one original image",
+    };
+  }
+
+  const imageIds = eligible.flatMap((id) => (imagesByProduct[id] ?? []).map((i) => i.id));
+  try {
+    if (imageIds.length) await updateImageQc(imageIds, status, extra);
+    await updateQcStatus(eligible, status);
+  } catch (e) {
+    return { updated: [], failed: ids, images: 0, message: (e as Error).message };
+  }
+  return {
+    updated: eligible,
+    failed,
+    images: imageIds.length,
+    message: failed.length ? `${failed.length} skipped — no original images to pass` : undefined,
+  };
+}
+
+/** How many products / original images a QC action would touch. */
+export function qcImpact(
+  ids: string[],
+  imagesByProduct: Record<string, ProductImage[]>,
+  status: QcStatus,
+) {
+  const eligible =
+    status === "PASS" ? ids.filter((id) => (imagesByProduct[id] ?? []).length > 0) : ids;
+  const images = eligible.reduce((n, id) => n + (imagesByProduct[id] ?? []).length, 0);
+  return { products: eligible.length, images, skipped: ids.length - eligible.length };
 }
 
 /** Bulk delete products (and their stored images). */

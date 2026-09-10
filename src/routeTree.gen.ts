@@ -18,6 +18,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
+import { Route as AppFindingRouteImport } from './routes/_app.finding'
 import { Route as AppImagesRouteImport } from './routes/_app.images'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -27,12 +28,6 @@ import { Route as AppAdminApprovalsRouteImport } from './routes/_app.admin.appro
 import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
 import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
 import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
-import { Route as AppFindingIndexRouteImport } from './routes/_app.finding.index'
-import { Route as AppFindingActivityRouteImport } from './routes/_app.finding.activity'
-import { Route as AppFindingAllRouteImport } from './routes/_app.finding.all'
-import { Route as AppFindingAssignedRouteImport } from './routes/_app.finding.assigned'
-import { Route as AppFindingSaveRouteImport } from './routes/_app.finding.save'
-import { Route as AppFindingSettingsRouteImport } from './routes/_app.finding.settings'
 import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
 import { Route as AppProductsNewRouteImport } from './routes/_app.products.new'
 import { Route as AppProductsIdIndexRouteImport } from './routes/_app.products.$id.index'
@@ -82,6 +77,11 @@ const AppEstimatesRoute = AppEstimatesRouteImport.update({
   path: '/estimates',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFindingRoute = AppFindingRouteImport.update({
+  id: '/finding',
+  path: '/finding',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppImagesRoute = AppImagesRouteImport.update({
   id: '/images',
   path: '/images',
@@ -127,36 +127,6 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFindingIndexRoute = AppFindingIndexRouteImport.update({
-  id: '/finding/',
-  path: '/finding/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingActivityRoute = AppFindingActivityRouteImport.update({
-  id: '/finding/activity',
-  path: '/finding/activity',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingAllRoute = AppFindingAllRouteImport.update({
-  id: '/finding/all',
-  path: '/finding/all',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingAssignedRoute = AppFindingAssignedRouteImport.update({
-  id: '/finding/assigned',
-  path: '/finding/assigned',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingSaveRoute = AppFindingSaveRouteImport.update({
-  id: '/finding/save',
-  path: '/finding/save',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingSettingsRoute = AppFindingSettingsRouteImport.update({
-  id: '/finding/settings',
-  path: '/finding/settings',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -187,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
   '/estimates': typeof AppEstimatesRoute
+  '/finding': typeof AppFindingRoute
   '/images': typeof AppImagesRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -196,13 +167,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
   '/admin/users': typeof AppAdminUsersRoute
-  '/finding/activity': typeof AppFindingActivityRoute
-  '/finding/all': typeof AppFindingAllRoute
-  '/finding/assigned': typeof AppFindingAssignedRoute
-  '/finding/save': typeof AppFindingSaveRoute
-  '/finding/settings': typeof AppFindingSettingsRoute
   '/products/new': typeof AppProductsNewRoute
-  '/finding/': typeof AppFindingIndexRoute
   '/products/': typeof AppProductsIndexRoute
   '/products/$id/edit': typeof AppProductsIdEditRoute
   '/products/$id/': typeof AppProductsIdIndexRoute
@@ -216,6 +181,7 @@ export interface FileRoutesByTo {
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
   '/estimates': typeof AppEstimatesRoute
+  '/finding': typeof AppFindingRoute
   '/images': typeof AppImagesRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -225,13 +191,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
   '/admin/users': typeof AppAdminUsersRoute
-  '/finding/activity': typeof AppFindingActivityRoute
-  '/finding/all': typeof AppFindingAllRoute
-  '/finding/assigned': typeof AppFindingAssignedRoute
-  '/finding/save': typeof AppFindingSaveRoute
-  '/finding/settings': typeof AppFindingSettingsRoute
   '/products/new': typeof AppProductsNewRoute
-  '/finding': typeof AppFindingIndexRoute
   '/products': typeof AppProductsIndexRoute
   '/products/$id/edit': typeof AppProductsIdEditRoute
   '/products/$id': typeof AppProductsIdIndexRoute
@@ -247,6 +207,7 @@ export interface FileRoutesById {
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/estimates': typeof AppEstimatesRoute
+  '/_app/finding': typeof AppFindingRoute
   '/_app/images': typeof AppImagesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -256,13 +217,7 @@ export interface FileRoutesById {
   '/_app/admin/audit': typeof AppAdminAuditRoute
   '/_app/admin/roles': typeof AppAdminRolesRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
-  '/_app/finding/activity': typeof AppFindingActivityRoute
-  '/_app/finding/all': typeof AppFindingAllRoute
-  '/_app/finding/assigned': typeof AppFindingAssignedRoute
-  '/_app/finding/save': typeof AppFindingSaveRoute
-  '/_app/finding/settings': typeof AppFindingSettingsRoute
   '/_app/products/new': typeof AppProductsNewRoute
-  '/_app/finding/': typeof AppFindingIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
   '/_app/products/$id/edit': typeof AppProductsIdEditRoute
   '/_app/products/$id/': typeof AppProductsIdIndexRoute
@@ -278,6 +233,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/dashboard'
     | '/estimates'
+    | '/finding'
     | '/images'
     | '/profile'
     | '/settings'
@@ -287,13 +243,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/roles'
     | '/admin/users'
-    | '/finding/activity'
-    | '/finding/all'
-    | '/finding/assigned'
-    | '/finding/save'
-    | '/finding/settings'
     | '/products/new'
-    | '/finding/'
     | '/products/'
     | '/products/$id/edit'
     | '/products/$id/'
@@ -307,6 +257,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/dashboard'
     | '/estimates'
+    | '/finding'
     | '/images'
     | '/profile'
     | '/settings'
@@ -316,13 +267,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/roles'
     | '/admin/users'
-    | '/finding/activity'
-    | '/finding/all'
-    | '/finding/assigned'
-    | '/finding/save'
-    | '/finding/settings'
     | '/products/new'
-    | '/finding'
     | '/products'
     | '/products/$id/edit'
     | '/products/$id'
@@ -337,6 +282,7 @@ export interface FileRouteTypes {
     | '/_app/categories'
     | '/_app/dashboard'
     | '/_app/estimates'
+    | '/_app/finding'
     | '/_app/images'
     | '/_app/profile'
     | '/_app/settings'
@@ -346,13 +292,7 @@ export interface FileRouteTypes {
     | '/_app/admin/audit'
     | '/_app/admin/roles'
     | '/_app/admin/users'
-    | '/_app/finding/activity'
-    | '/_app/finding/all'
-    | '/_app/finding/assigned'
-    | '/_app/finding/save'
-    | '/_app/finding/settings'
     | '/_app/products/new'
-    | '/_app/finding/'
     | '/_app/products/'
     | '/_app/products/$id/edit'
     | '/_app/products/$id/'
@@ -432,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEstimatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/finding': {
+      id: '/_app/finding'
+      path: '/finding'
+      fullPath: '/finding'
+      preLoaderRoute: typeof AppFindingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/images': {
       id: '/_app/images'
       path: '/images'
@@ -495,48 +442,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/finding/': {
-      id: '/_app/finding/'
-      path: '/finding'
-      fullPath: '/finding/'
-      preLoaderRoute: typeof AppFindingIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/activity': {
-      id: '/_app/finding/activity'
-      path: '/finding/activity'
-      fullPath: '/finding/activity'
-      preLoaderRoute: typeof AppFindingActivityRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/all': {
-      id: '/_app/finding/all'
-      path: '/finding/all'
-      fullPath: '/finding/all'
-      preLoaderRoute: typeof AppFindingAllRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/assigned': {
-      id: '/_app/finding/assigned'
-      path: '/finding/assigned'
-      fullPath: '/finding/assigned'
-      preLoaderRoute: typeof AppFindingAssignedRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/save': {
-      id: '/_app/finding/save'
-      path: '/finding/save'
-      fullPath: '/finding/save'
-      preLoaderRoute: typeof AppFindingSaveRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding/settings': {
-      id: '/_app/finding/settings'
-      path: '/finding/settings'
-      fullPath: '/finding/settings'
-      preLoaderRoute: typeof AppFindingSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/products/': {
       id: '/_app/products/'
       path: '/products'
@@ -572,6 +477,7 @@ interface AppRouteChildren {
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppEstimatesRoute: typeof AppEstimatesRoute
+  AppFindingRoute: typeof AppFindingRoute
   AppImagesRoute: typeof AppImagesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -581,13 +487,7 @@ interface AppRouteChildren {
   AppAdminAuditRoute: typeof AppAdminAuditRoute
   AppAdminRolesRoute: typeof AppAdminRolesRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
-  AppFindingActivityRoute: typeof AppFindingActivityRoute
-  AppFindingAllRoute: typeof AppFindingAllRoute
-  AppFindingAssignedRoute: typeof AppFindingAssignedRoute
-  AppFindingSaveRoute: typeof AppFindingSaveRoute
-  AppFindingSettingsRoute: typeof AppFindingSettingsRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
-  AppFindingIndexRoute: typeof AppFindingIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
   AppProductsIdEditRoute: typeof AppProductsIdEditRoute
   AppProductsIdIndexRoute: typeof AppProductsIdIndexRoute
@@ -597,6 +497,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCategoriesRoute: AppCategoriesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppEstimatesRoute: AppEstimatesRoute,
+  AppFindingRoute: AppFindingRoute,
   AppImagesRoute: AppImagesRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -606,13 +507,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminAuditRoute: AppAdminAuditRoute,
   AppAdminRolesRoute: AppAdminRolesRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
-  AppFindingActivityRoute: AppFindingActivityRoute,
-  AppFindingAllRoute: AppFindingAllRoute,
-  AppFindingAssignedRoute: AppFindingAssignedRoute,
-  AppFindingSaveRoute: AppFindingSaveRoute,
-  AppFindingSettingsRoute: AppFindingSettingsRoute,
   AppProductsNewRoute: AppProductsNewRoute,
-  AppFindingIndexRoute: AppFindingIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
   AppProductsIdEditRoute: AppProductsIdEditRoute,
   AppProductsIdIndexRoute: AppProductsIdIndexRoute,

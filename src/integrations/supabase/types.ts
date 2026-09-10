@@ -216,17 +216,22 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
+          extra: Json
           finding_by: string | null
           gender: string | null
           id: string
           image_path: string | null
+          image_seeds: Json
+          main_image: string | null
           note: string | null
           platform: string
           priority: string
           product_url: string | null
+          source_sku: string | null
           status: string
           style: string | null
           thumb_path: string | null
+          title: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -237,17 +242,22 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          extra?: Json
           finding_by?: string | null
           gender?: string | null
           id?: string
           image_path?: string | null
+          image_seeds?: Json
+          main_image?: string | null
           note?: string | null
           platform?: string
           priority?: string
           product_url?: string | null
+          source_sku?: string | null
           status?: string
           style?: string | null
           thumb_path?: string | null
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -258,17 +268,22 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          extra?: Json
           finding_by?: string | null
           gender?: string | null
           id?: string
           image_path?: string | null
+          image_seeds?: Json
+          main_image?: string | null
           note?: string | null
           platform?: string
           priority?: string
           product_url?: string | null
+          source_sku?: string | null
           status?: string
           style?: string | null
           thumb_path?: string | null
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -361,6 +376,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           path: string
           position: number
           product_id: string
@@ -370,6 +386,7 @@ export type Database = {
           qc_status: string
           qc_updated_at: string | null
           size_bytes: number
+          source_url: string | null
           thumb_path: string | null
           uploaded_by: string | null
           url: string
@@ -377,6 +394,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           path: string
           position?: number
           product_id: string
@@ -386,6 +404,7 @@ export type Database = {
           qc_status?: string
           qc_updated_at?: string | null
           size_bytes?: number
+          source_url?: string | null
           thumb_path?: string | null
           uploaded_by?: string | null
           url: string
@@ -393,6 +412,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           path?: string
           position?: number
           product_id?: string
@@ -402,6 +422,7 @@ export type Database = {
           qc_status?: string
           qc_updated_at?: string | null
           size_bytes?: number
+          source_url?: string | null
           thumb_path?: string | null
           uploaded_by?: string | null
           url?: string
@@ -428,6 +449,8 @@ export type Database = {
           etsy_listed_by: string | null
           etsy_status: string
           etsy_url: string | null
+          finding_code: string | null
+          finding_id: string | null
           id: string
           is_shared: boolean
           name: string
@@ -438,6 +461,21 @@ export type Database = {
           qc_updated_at: string | null
           reference_url: string | null
           sku: string | null
+          source_assigned_to: string | null
+          source_brand: string | null
+          source_currency: string | null
+          source_description: string | null
+          source_details: Json
+          source_found_by: string | null
+          source_listing_id: string | null
+          source_platform: string | null
+          source_price: string | null
+          source_priority: string | null
+          source_seller: string | null
+          source_sku: string | null
+          source_tags: string[]
+          source_type: string | null
+          source_url: string | null
           subcategory: string | null
           team_member: string
           updated_at: string
@@ -454,6 +492,8 @@ export type Database = {
           etsy_listed_by?: string | null
           etsy_status?: string
           etsy_url?: string | null
+          finding_code?: string | null
+          finding_id?: string | null
           id?: string
           is_shared?: boolean
           name: string
@@ -464,6 +504,21 @@ export type Database = {
           qc_updated_at?: string | null
           reference_url?: string | null
           sku?: string | null
+          source_assigned_to?: string | null
+          source_brand?: string | null
+          source_currency?: string | null
+          source_description?: string | null
+          source_details?: Json
+          source_found_by?: string | null
+          source_listing_id?: string | null
+          source_platform?: string | null
+          source_price?: string | null
+          source_priority?: string | null
+          source_seller?: string | null
+          source_sku?: string | null
+          source_tags?: string[]
+          source_type?: string | null
+          source_url?: string | null
           subcategory?: string | null
           team_member: string
           updated_at?: string
@@ -480,6 +535,8 @@ export type Database = {
           etsy_listed_by?: string | null
           etsy_status?: string
           etsy_url?: string | null
+          finding_code?: string | null
+          finding_id?: string | null
           id?: string
           is_shared?: boolean
           name?: string
@@ -490,6 +547,21 @@ export type Database = {
           qc_updated_at?: string | null
           reference_url?: string | null
           sku?: string | null
+          source_assigned_to?: string | null
+          source_brand?: string | null
+          source_currency?: string | null
+          source_description?: string | null
+          source_details?: Json
+          source_found_by?: string | null
+          source_listing_id?: string | null
+          source_platform?: string | null
+          source_price?: string | null
+          source_priority?: string | null
+          source_seller?: string | null
+          source_sku?: string | null
+          source_tags?: string[]
+          source_type?: string | null
+          source_url?: string | null
           subcategory?: string | null
           team_member?: string
           updated_at?: string

@@ -113,7 +113,8 @@ export function ProductForm({ product }: { product?: Product }) {
     };
   }, [existing, isEdit]);
 
-  const canSubmit = !!name.trim() && !!category && !!member && slots.length >= 1;
+  // Editing must stay possible for products that have no images yet (e.g. created from a finding).
+  const canSubmit = !!name.trim() && !!category && !!member && (isEdit || slots.length >= 1);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
