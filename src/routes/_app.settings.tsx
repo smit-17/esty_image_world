@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Database, Lock, Palette, Store, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Database, Lock, Palette, Store, Plus, Trash2, FileImage } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,12 @@ import {
   fetchProducts,
   formatBytes,
 } from "@/lib/lepdo";
+import {
+  DOWNLOAD_FORMATS,
+  getDownloadFormat,
+  setDownloadFormat,
+  type DownloadFormat,
+} from "@/lib/download-format";
 
 
 export const Route = createFileRoute("/_app/settings")({
@@ -137,6 +143,36 @@ function EtsyAccountsCard() {
   );
 }
 
+function DownloadFormatCard() {
+  const [format, setFormat] = useState<DownloadFormat>(() => getDownloadFormat());
+
+  function change(value: DownloadFormat) {
+    setFormat(value);
+    setDownloadFormat(value);
+    toast.success(`Download format set to ${value.toUpperCase()}`);
+  }
+
+  return (
+    <Card title="Image Download Format" icon={FileImage}>
+      <p className="text-sm text-muted-foreground">
+        All image downloads across the app are converted to this format. Saved until you change it.
+      </p>
+      <select
+        value={format}
+        onChange={(e) => change(e.target.value as DownloadFormat)}
+        className="mt-4 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+        aria-label="Image download format"
+      >
+        {DOWNLOAD_FORMATS.map((f) => (
+          <option key={f.value} value={f.value}>
+            {f.label}
+          </option>
+        ))}
+      </select>
+    </Card>
+  );
+}
+
 function SettingsPage() {
   const { lock } = useGate();
   const navigate = useNavigate();
@@ -171,6 +207,8 @@ function SettingsPage() {
         </Card>
 
         <EtsyAccountsCard />
+
+        <DownloadFormatCard />
 
 
 

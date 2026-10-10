@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { assertPerm, hasPerm } from "@/lib/auth";
+import { convertImageBlob, getDownloadFormat } from "@/lib/download-format";
 
 export const BUCKET = "jewelry-images";
 export const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB plan allowance
@@ -382,8 +383,8 @@ export async function downloadSingleImage(product: Product, image: ProductImage,
   assertCanDownload();
   const { data, error } = await supabase.storage.from(BUCKET).download(image.path);
   if (error || !data) throw new Error("Could not download this image");
-  const ext = image.path.split(".").pop() ?? "webp";
-  triggerDownload(data, `${slugify(product.name)}-${String(index + 1).padStart(2, "0")}.${ext}`);
+  const { blob, ext } = await convertImageBlob(data, getDownloadFormat());
+  triggerDownload(blob, `${slugify(product.name)}-${String(index + 1).padStart(2, "0")}.${ext}`);
 }
 
 /** Download every image of a product as a single .zip file (parallel fetch). */
@@ -398,6 +399,7 @@ export async function downloadProductImages(
   const zip = new JSZip();
 
   let done = 0;
+  const format = getDownloadFormat();
   const files = await Promise.all(
     images.map(async (img, i) => {
       const { data } = await supabase.storage.from(BUCKET).download(img.path);
@@ -409,8 +411,8 @@ export async function downloadProductImages(
 
   for (const { i, data } of files) {
     if (!data) continue;
-    const ext = images[i].path.split(".").pop() ?? "webp";
-    zip.file(`${slugify(product.name)}-${String(i + 1).padStart(2, "0")}.${ext}`, data);
+    const { blob, ext } = await convertImageBlob(data, format);
+    zip.file(`${slugify(product.name)}-${String(i + 1).padStart(2, "0")}.${ext}`, blob);
   }
 
   const blob = await zip.generateAsync({ type: "blob" });
@@ -687,6 +689,7 @@ export async function downloadProductsZip(
   const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
   let done = 0;
+  const format = getDownloadFormat();
   const files = await Promise.all(
     all.map(async (entry) => {
       const { data } = await supabase.storage.from(BUCKET).download(entry.img.path);
@@ -697,9 +700,9 @@ export async function downloadProductsZip(
   );
   for (const { p, img, i, data } of files) {
     if (!data) continue;
-    const ext = img.path.split(".").pop() ?? "webp";
+    const { blob, ext } = await convertImageBlob(data, format);
     const folder = `${p.sku ? `${p.sku}-` : ""}${slugify(p.name)}`;
-    zip.file(`${folder}/${slugify(p.name)}-${String(i + 1).padStart(2, "0")}.${ext}`, data);
+    zip.file(`${folder}/${slugify(p.name)}-${String(i + 1).padStart(2, "0")}.${ext}`, blob);
   }
   const blob = await zip.generateAsync({ type: "blob" });
   triggerDownload(blob, `lepdo-products-${products.length}.zip`);
