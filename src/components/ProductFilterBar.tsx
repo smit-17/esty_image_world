@@ -318,7 +318,7 @@ export function ProductFilterBar({
   }
 
   return (
-    <div className="surface sticky top-2 z-20 space-y-2.5 p-3">
+    <div className={cn("surface space-y-2.5 p-3", scope === "estimates" ? "relative sm:sticky sm:top-2 sm:z-20" : "sticky top-2 z-20")}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[12rem] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

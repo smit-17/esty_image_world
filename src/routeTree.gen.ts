@@ -9,43 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as PendingRouteImport } from './routes/pending'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppTeamRouteImport } from './routes/_app.team'
-import { Route as AppStorageRouteImport } from './routes/_app.storage'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppProfileRouteImport } from './routes/_app.profile'
-import { Route as AppImagesRouteImport } from './routes/_app.images'
-import { Route as AppFindingRouteImport } from './routes/_app.finding'
-import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as PendingRouteImport } from './routes/pending'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppEstimatesRouteImport } from './routes/_app.estimates'
+import { Route as AppFindingRouteImport } from './routes/_app.finding'
+import { Route as AppImagesRouteImport } from './routes/_app.images'
+import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppStorageRouteImport } from './routes/_app.storage'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
+import { Route as AppAdminApprovalsRouteImport } from './routes/_app.admin.approvals'
+import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
+import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
 import { Route as AppProductsNewRouteImport } from './routes/_app.products.new'
-import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
-import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
-import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
-import { Route as AppAdminApprovalsRouteImport } from './routes/_app.admin.approvals'
 import { Route as AppProductsIdIndexRouteImport } from './routes/_app.products.$id.index'
 import { Route as AppProductsIdEditRouteImport } from './routes/_app.products.$id.edit'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PendingRoute = PendingRouteImport.update({
-  id: '/pending',
-  path: '/pending',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -53,48 +47,24 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const PendingRoute = PendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppTeamRoute = AppTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AppRoute,
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppStorageRoute = AppStorageRouteImport.update({
-  id: '/storage',
-  path: '/storage',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProfileRoute = AppProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppImagesRoute = AppImagesRouteImport.update({
-  id: '/images',
-  path: '/images',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFindingRoute = AppFindingRouteImport.update({
-  id: '/finding',
-  path: '/finding',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEstimatesRoute = AppEstimatesRouteImport.update({
-  id: '/estimates',
-  path: '/estimates',
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -102,9 +72,59 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const AppCategoriesRoute = AppCategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
+const AppEstimatesRoute = AppEstimatesRouteImport.update({
+  id: '/estimates',
+  path: '/estimates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindingRoute = AppFindingRouteImport.update({
+  id: '/finding',
+  path: '/finding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImagesRoute = AppImagesRouteImport.update({
+  id: '/images',
+  path: '/images',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStorageRoute = AppStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminApprovalsRoute = AppAdminApprovalsRouteImport.update({
+  id: '/admin/approvals',
+  path: '/admin/approvals',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
+  id: '/admin/audit',
+  path: '/admin/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
@@ -115,26 +135,6 @@ const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
 const AppProductsNewRoute = AppProductsNewRouteImport.update({
   id: '/products/new',
   path: '/products/new',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
-  id: '/admin/roles',
-  path: '/admin/roles',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
-  id: '/admin/audit',
-  path: '/admin/audit',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminApprovalsRoute = AppAdminApprovalsRouteImport.update({
-  id: '/admin/approvals',
-  path: '/admin/approvals',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsIdIndexRoute = AppProductsIdIndexRouteImport.update({
@@ -309,32 +309,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pending': {
-      id: '/pending'
-      path: '/pending'
-      fullPath: '/pending'
-      preLoaderRoute: typeof PendingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -344,60 +323,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/team': {
-      id: '/_app/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof AppTeamRouteImport
-      parentRoute: typeof AppRoute
+    '/pending': {
+      id: '/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof PendingRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/storage': {
-      id: '/_app/storage'
-      path: '/storage'
-      fullPath: '/storage'
-      preLoaderRoute: typeof AppStorageRouteImport
-      parentRoute: typeof AppRoute
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/profile': {
-      id: '/_app/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AppProfileRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/images': {
-      id: '/_app/images'
-      path: '/images'
-      fullPath: '/images'
-      preLoaderRoute: typeof AppImagesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finding': {
-      id: '/_app/finding'
-      path: '/finding'
-      fullPath: '/finding'
-      preLoaderRoute: typeof AppFindingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/estimates': {
-      id: '/_app/estimates'
-      path: '/estimates'
-      fullPath: '/estimates'
-      preLoaderRoute: typeof AppEstimatesRouteImport
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -407,11 +365,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/categories': {
-      id: '/_app/categories'
-      path: '/categories'
-      fullPath: '/categories'
-      preLoaderRoute: typeof AppCategoriesRouteImport
+    '/_app/estimates': {
+      id: '/_app/estimates'
+      path: '/estimates'
+      fullPath: '/estimates'
+      preLoaderRoute: typeof AppEstimatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finding': {
+      id: '/_app/finding'
+      path: '/finding'
+      fullPath: '/finding'
+      preLoaderRoute: typeof AppFindingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/images': {
+      id: '/_app/images'
+      path: '/images'
+      fullPath: '/images'
+      preLoaderRoute: typeof AppImagesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/storage': {
+      id: '/_app/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof AppStorageRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/approvals': {
+      id: '/_app/admin/approvals'
+      path: '/admin/approvals'
+      fullPath: '/admin/approvals'
+      preLoaderRoute: typeof AppAdminApprovalsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/audit': {
+      id: '/_app/admin/audit'
+      path: '/admin/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AppAdminAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/roles': {
+      id: '/_app/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AppAdminRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/products/': {
@@ -426,34 +454,6 @@ declare module '@tanstack/react-router' {
       path: '/products/new'
       fullPath: '/products/new'
       preLoaderRoute: typeof AppProductsNewRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/users': {
-      id: '/_app/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AppAdminUsersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/roles': {
-      id: '/_app/admin/roles'
-      path: '/admin/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AppAdminRolesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/audit': {
-      id: '/_app/admin/audit'
-      path: '/admin/audit'
-      fullPath: '/admin/audit'
-      preLoaderRoute: typeof AppAdminAuditRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/approvals': {
-      id: '/_app/admin/approvals'
-      path: '/admin/approvals'
-      fullPath: '/admin/approvals'
-      preLoaderRoute: typeof AppAdminApprovalsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/products/$id/': {

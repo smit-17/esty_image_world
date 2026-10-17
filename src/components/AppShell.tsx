@@ -217,7 +217,7 @@ export function AppShell() {
         </main>
       </div>
 
-      {can("PRODUCT_ADD") && (
+      {can("PRODUCT_ADD") && pathname !== "/estimates" && (
         <Link
           to="/products/new"
           className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-transform hover:scale-105 sm:hidden"

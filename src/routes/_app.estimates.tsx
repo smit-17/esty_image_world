@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Check, ImageOff, Clock, Plus, Trash2 } from "lucide-react";
+import { Loader2, Check, Clock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,9 @@ import {
   type ProductEstimate,
 } from "@/lib/lepdo";
 import { cn } from "@/lib/utils";
-import { ImageLightbox } from "@/components/ImageLightbox";
+import { EstimateImagePreview } from "@/components/EstimateImagePreview";
 import { ProductNote } from "@/components/ProductNote";
+import { EstimateImageCarousel } from "@/components/EstimateImageCarousel";
 import { useIncremental } from "@/hooks/useIncremental";
 
 export const Route = createFileRoute("/_app/estimates")({
@@ -111,6 +112,16 @@ function EstimatesPage() {
     return map;
   }, [products, imagesByProduct]);
 
+  const pathsByProduct = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const p of products) {
+      const cover = coverByProduct[p.id];
+      const paths = (imagesByProduct[p.id] ?? []).map((image) => image.path);
+      map[p.id] = cover ? [cover, ...paths.filter((path) => path !== cover)] : paths;
+    }
+    return map;
+  }, [products, imagesByProduct, coverByProduct]);
+
   const imageCountByProduct = useMemo(() => {
     const map: Record<string, number> = {};
     for (const id of Object.keys(imagesByProduct)) map[id] = imagesByProduct[id].length;
@@ -153,14 +164,8 @@ function EstimatesPage() {
   const viewerProduct = products.find((p) => p.id === viewer?.productId);
   const viewerPaths = useMemo(() => {
     if (!viewer) return [] as string[];
-    const own = imagesByProduct[viewer.productId] ?? [];
-    const cover = viewerProduct?.cover_url;
-    const sorted = [...own].sort((a, b) =>
-      a.path === cover ? -1 : b.path === cover ? 1 : 0,
-    );
-    const paths = sorted.map((i) => i.path);
-    return paths.length ? paths : cover ? [cover] : [];
-  }, [viewer, imagesByProduct, viewerProduct]);
+    return pathsByProduct[viewer.productId] ?? [];
+  }, [viewer, pathsByProduct]);
 
   const { data: viewerSigned = {} } = useQuery({
     queryKey: ["signed", "viewer", viewerPaths.join(",")],
@@ -173,11 +178,11 @@ function EstimatesPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <header className="min-w-0 space-y-3">
         <div>
           <p className="text-eyebrow">Estimates</p>
-          <h1 className="mt-1 text-3xl text-primary lg:text-4xl">Metal &amp; Diamond Estimate</h1>
+          <h1 className="mt-1 text-2xl text-primary sm:text-3xl lg:text-4xl">Metal &amp; Diamond Estimate</h1>
         </div>
 
         {/* Quick status tabs */}
@@ -275,9 +280,10 @@ function EstimatesPage() {
               key={p.id}
               product={p}
               cover={signed[coverByProduct[p.id] ?? ""]}
+              imagePaths={pathsByProduct[p.id] ?? []}
               estimate={byProduct[p.id]}
               onSaved={() => queryClient.invalidateQueries({ queryKey: ["estimates"] })}
-              onOpenImages={() => setViewer({ productId: p.id, index: 0 })}
+              onOpenImages={(index) => setViewer({ productId: p.id, index })}
             />
           ))}
         </div>
@@ -290,10 +296,10 @@ function EstimatesPage() {
       )}
 
       {viewer && viewerUrls.length > 0 && (
-        <ImageLightbox
+        <EstimateImagePreview
           urls={viewerUrls}
           index={Math.min(viewer.index, viewerUrls.length - 1)}
-          title={viewerProduct?.name}
+          title={viewerProduct?.sku || viewerProduct?.name}
           onIndexChange={(i) => setViewer((v) => (v ? { ...v, index: i } : v))}
           onClose={() => setViewer(null)}
         />
@@ -342,15 +348,17 @@ function EstimateCard({
 
   product,
   cover,
+  imagePaths,
   estimate,
   onSaved,
   onOpenImages,
 }: {
   product: Product;
   cover?: string;
+  imagePaths: string[];
   estimate?: ProductEstimate;
   onSaved: () => void;
-  onOpenImages: () => void;
+  onOpenImages: (index: number) => void;
 }) {
   const initialRows = (e?: ProductEstimate): DiamondRow[] => {
     const rows = (e?.diamonds ?? []).filter((r) => r);
@@ -360,6 +368,11 @@ function EstimateCard({
   const [rows, setRows] = useState<DiamondRow[]>(initialRows(estimate));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedFeedback, setSavedFeedback] = useState(false);
+
+  useEffect(() => {
+    if (dirty) setSavedFeedback(false);
+  }, [dirty]);
 
   // Keep the card in sync when the saved record refreshes and the user isn't editing.
   useEffect(() => {
@@ -389,6 +402,7 @@ function EstimateCard({
         diamond_type: estimate?.diamond_type ?? null,
       });
       setDirty(false);
+      setSavedFeedback(true);
       onSaved();
       toast.success(`Saved · ${product.name}`);
     } catch (e) {
@@ -402,34 +416,15 @@ function EstimateCard({
 
   return (
     <section className="surface flex min-w-0 flex-col overflow-hidden">
-      <button type="button" onClick={onOpenImages} className="block w-full text-left">
-        <div className="relative aspect-square overflow-hidden bg-muted">
-          {cover ? (
-            <img
-              src={cover}
-              alt={product.name}
-              loading="lazy"
-              decoding="async"
-              className="size-full object-cover"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center text-muted-foreground">
-              <ImageOff className="size-6" strokeWidth={1.5} />
-            </div>
-          )}
-          <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wider text-primary">
-            {product.category}
-          </span>
-        </div>
-      </button>
+      <EstimateImageCarousel paths={imagePaths} cover={cover} title={product.sku || product.name} category={product.category} onOpen={onOpenImages} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-3 sm:gap-3 sm:p-4">
         <header className="min-w-0 space-y-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="min-w-0 flex-1 truncate text-base leading-snug">{product.name}</h2>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:flex sm:justify-between">
+            <h2 className="min-w-0 flex-1 truncate text-sm leading-snug sm:text-base" title={product.name}>{product.sku || product.name}</h2>
             <span
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:gap-1.5 sm:px-3 sm:py-1.5",
                 done
                   ? "bg-primary text-primary-foreground"
                   : "bg-gold/20 text-primary ring-1 ring-gold/50",
@@ -457,29 +452,34 @@ function EstimateCard({
               setDirty(true);
             }}
             placeholder="3.25"
-            className="h-10 rounded-xl tabular-nums"
+            aria-label="14KT Gold Weight (gm)"
+            className="h-11 rounded-lg text-base tabular-nums sm:h-10 sm:rounded-xl sm:text-sm"
           />
         </label>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Diamond Weight</span>
-          {rows.map((r) => (
-            <div key={r.id} className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Diamond Weight (ct) &amp; Size / Details</span>
+          {rows.map((r, index) => (
+            <div key={r.id} className="grid grid-cols-[5rem_minmax(0,1fr)_2.75rem] items-center gap-1.5 sm:flex">
               <Input
                 inputMode="decimal"
                 value={r.weight}
                 onChange={(e) => updateRow(r.id, { weight: onlyNum(e.target.value) })}
                 placeholder="0.50"
-                className="h-9 w-20 shrink-0 rounded-lg tabular-nums"
+                aria-label={`Diamond weight (ct), row ${index + 1}`}
+                className="h-11 w-20 shrink-0 rounded-lg text-base tabular-nums sm:h-9 sm:text-sm"
               />
               <Input
                 value={r.note}
                 onChange={(e) => updateRow(r.id, { note: e.target.value })}
                 placeholder="Details / Size"
-                className="h-9 min-w-0 flex-1 rounded-lg"
+                aria-label={`Diamond size or details, row ${index + 1}`}
+                className="h-11 min-w-0 flex-1 rounded-lg text-base sm:h-9 sm:text-sm"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 aria-label="Delete diamond row"
                 onClick={() => {
                   setRows((prev) =>
@@ -487,23 +487,24 @@ function EstimateCard({
                   );
                   setDirty(true);
                 }}
-                className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive"
+                className="size-11 shrink-0 rounded-lg text-muted-foreground hover:text-destructive sm:size-9"
               >
                 <Trash2 className="size-4" />
-              </button>
+              </Button>
             </div>
           ))}
-          <div className="flex items-center justify-between gap-2 pt-0.5">
-            <button
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 pt-0.5 sm:flex sm:justify-between">
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => {
                 setRows((prev) => [...prev, newRow()]);
                 setDirty(true);
               }}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+              className="h-10 justify-start gap-1 px-0 text-xs font-semibold text-primary sm:h-8"
             >
               <Plus className="size-3.5" /> Add Diamond Row
-            </button>
+            </Button>
             <span className="text-xs font-semibold tabular-nums text-primary">
               Total: {totalDiamond.toFixed(2)} ct
             </span>
@@ -511,14 +512,15 @@ function EstimateCard({
         </div>
 
 
-        <Button onClick={save} disabled={saving} className="mt-auto h-11 w-full rounded-full">
+        <Button onClick={save} disabled={saving} className="mt-auto h-11 w-full rounded-lg sm:rounded-full">
           {saving ? (
             <Loader2 className="size-4 animate-spin" />
-          ) : !dirty && done ? (
+          ) : !dirty && (done || savedFeedback) ? (
             <Check className="size-4" />
           ) : null}
-          Save
+          {savedFeedback && !dirty ? "Saved" : "Save"}
         </Button>
+        <span role="status" className="sr-only">{savedFeedback && !dirty ? "Estimate saved" : ""}</span>
       </div>
 
     </section>
